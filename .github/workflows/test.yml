@@ -1,0 +1,28 @@
+name: tests
+on: [push, pull_request]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - run: pip install -e ".[dev]"
+      # SymPy at the commit the refine gates use (satrefine/tools/refine_gates.sh): the refine
+      # tests need its assumptions/refine changes, and PyPI's SymPy fails some of them
+      - run: pip install "sympy @ git+https://github.com/tilorc-bot/sympy@6379c4da69"
+      # one run per tree: the trees share test module basenames; tests/refine_identities/needs
+      # holds open requests (expected to fail) and is left out
+      - run: python -m pytest -q -n auto tests/refine_identities --ignore=tests/refine_identities/needs
+        env: {PYTHONHASHSEED: "0"}
+      - run: python -m pytest -q -n auto tests/refine
+        if: always()
+        env: {PYTHONHASHSEED: "0"}
+      - run: python -m pytest -q -n auto tests/refine_v3
+        if: always()
+        env: {PYTHONHASHSEED: "0"}

@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "satrefine"
+version = "0.1.0"
+description = "SymPy's refine() as rule tables, on the satassume ask engine"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {text = "BSD-3-Clause"}
+# satassume pinned to the commit this code was developed against (the copy it
+# carried in tilorc-bot/satassume's refine-identities branch differed only in comments)
+dependencies = [
+    "satassume @ git+https://github.com/tilorc-bot/satassume@a186157cc0b529d8e5e6e8a27a977c14f15ce913",
+    "sympy>=1.12",
+    "mpmath",
+]
+
+[project.optional-dependencies]
+dev = ["pytest", "pytest-xdist", "hypothesis", "z3-solver"]
+
+[tool.setuptools.packages.find]
+include = ["satrefine*"]
+# offline parts (table generation, tools, test fixtures) and the reference handlers
+# (satrefine.reference, selected as handlers_v3) are dev-only
+exclude = ["satrefine.build*", "satrefine.tools*", "satrefine.testing*", "satrefine.reference*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
