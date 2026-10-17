@@ -95,9 +95,9 @@ A method `trigsimp` would go here:
 | wiring (rows to handlers) | `satsimp/methods/trigsimp/wiring.py`, building `engine.spec.Family` objects |
 | SymPy workarounds, special cases | inside the method's package, never in the engine |
 | environment switches | `satsimp/methods/trigsimp/config.py`, read with `engine.config.env` |
-| generated tables | `satsimp/methods/trigsimp/generated/`, written by a `tools/trigsimp_specialize.py`; its generation settings next to refine's in `build/` |
+| generated tables | `satsimp/methods/trigsimp/generated/`, written by a `satsimp/tools/trigsimp_specialize.py`; its generation settings next to refine's in `build/` |
 | tests | `tests/trigsimp/`, run in its own process like the refine trees, and added to CI |
-| tools | `satsimp/tools/trigsimp_*.py`, sharing `tools/lib` |
+| tools | `satsimp/tools/trigsimp_*.py`, sharing `satsimp/tools/lib` |
 
 Refine must not slow down or change: a method is imported only when used, and
 importing one registers nothing in another.

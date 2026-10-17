@@ -57,7 +57,7 @@ on the battery and matched 1,073 of v3's 1,086 rewrites, in 483 family code
 lines against 1,595, though its engine (1,132 lines) made the totals about equal.
 By `905be5d` every remaining difference from v3 was reviewed and accepted
 (`satsimp/tools/lib/accepted.py`). At `075d1f8`, counted by
-`tools/lib/sizes.py`: families 685 lines, engine 1,855 (online
+`satsimp/tools/lib/sizes.py`: families 685 lines, engine 1,855 (online
 1,497, offline 358), v3 1,625.
 
 ## Layout
