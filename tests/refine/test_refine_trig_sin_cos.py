@@ -1,7 +1,7 @@
 """Tests for the guarded ``sin``/``cos`` refine handler.
 
 The handler is a copy of the vendored
-:func:`satsimp.identities.compat.upstream.refine_sin_cos` with the PR #29450 guard
+:func:`satsimp.methods.refine.identities.compat.upstream.refine_sin_cos` with the PR #29450 guard
 for the ``(-1)**(k/2)`` factor that can evaluate to an ``Integer``.
 """
 from __future__ import annotations

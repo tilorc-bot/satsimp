@@ -1,12 +1,12 @@
-"""Rendering and writing the generated rule tables (``satsimp/identities/generated/<family>.py``)."""
+"""Rendering and writing the generated rule tables (``satsimp/methods/refine/identities/generated/<family>.py``)."""
 from __future__ import annotations
 
 import pathlib
 from typing import Iterable
 
-from ..identities import family_module_name
-from ..identities.core.prove import ByCases
-from ..identities.core.rewrite import Row
+from ..methods.refine.identities import family_module_name
+from ..engine.prove import ByCases
+from ..engine.rewrite import Row
 
 def table_order(rules: Iterable[Row]) -> list[Row]:
     """The order of a generated table: left sides with structure before a head of bare
@@ -36,10 +36,10 @@ def render_module(family: str, rules: list[Row], keys: list[str], notes: dict | 
         "from sympy import *  # noqa: F401,F403",
         "from sympy import Q",
         "",
-        "from satsimp.identities.core.driver import generated_handlers as handlers_dict",
-        *(["from satsimp.identities.core.prove import by_cases"]
+        "from satsimp.engine.driver import generated_handlers as handlers_dict",
+        *(["from satsimp.engine.prove import by_cases"]
           if any(hyp.atoms(ByCases) for _, _, hyp in rules) else []),   # a hypothesis marked by cases
-        "from satsimp.identities.core.rewrite import rule_handler",
+        "from satsimp.engine.rewrite import rule_handler",
         "",
     ]
     if syms:
@@ -59,5 +59,5 @@ def render_module(family: str, rules: list[Row], keys: list[str], notes: dict | 
 
 
 def generated_path(family: str) -> pathlib.Path:
-    return pathlib.Path(__file__).resolve().parent.parent / "identities" / "generated" / f"{family}.py"
+    return pathlib.Path(__file__).resolve().parents[1] / "methods/refine/identities/generated" / f"{family}.py"
 

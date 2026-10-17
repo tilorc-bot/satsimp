@@ -1,12 +1,12 @@
 """What a table generation switches on in the driver, through its one observer hook
-(:func:`satsimp.identities.core.driver.observing`)."""
+(:func:`satsimp.engine.driver.observing`)."""
 from __future__ import annotations
 
 from contextlib import contextmanager
 from typing import Any, Iterator
 
-from ..identities.compat import upstream as _upstream
-from ..identities.core.driver import observing
+from ..methods.refine.identities.compat import upstream as _upstream
+from ..engine.driver import observing
 
 
 @contextmanager

@@ -4,7 +4,7 @@ from __future__ import annotations
 import ast
 import pathlib
 
-import satsimp.reference.v3 as package
+import satsimp.methods.refine.reference.v3 as package
 
 EXPECTED = {
     "power_exp_log": {"Pow", "exp", "log"},

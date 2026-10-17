@@ -1,7 +1,7 @@
 """Shared fixtures for the refine-handler tests (``tests/refine``).
 
 The suite runs against the default handler package
-(:data:`satsimp.DEFAULT_HANDLERS`, ``handlers_identities``) unless
+(:data:`satsimp.methods.refine.DEFAULT_HANDLERS`, ``handlers_identities``) unless
 ``SATREFINE_HANDLERS`` selects another one.  It was written for the original
 package, ``satrefine.handlers``, which was removed in phase 3 with the tests of
 its internals (``docs/refine.md``, "Three implementations";
@@ -18,7 +18,7 @@ from collections.abc import Iterator
 
 import pytest
 
-from satsimp import HANDLERS_PACKAGE
+from satsimp.methods.refine import HANDLERS_PACKAGE
 from satsimp.testing.harness import query_scope_recorder
 from satsimp.testing.harness import reference_ask as _reference_ask
 

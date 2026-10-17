@@ -71,8 +71,8 @@ SHORT = bat.SHORT
 # ---------------------------------------------------------------------------
 
 def family_file(family: str) -> Path:
-    """The family's module file (``satsimp/identities/rules/`` or, for the matrices, ``compat/``)."""
-    package = ROOT / "satsimp" / "identities"
+    """The family's module file (``satsimp/methods/refine/identities/rules/`` or, for the matrices, ``compat/``)."""
+    package = ROOT / "satsimp" / "methods" / "refine" / "identities"
     return next((p for p in (package / "rules" / f"{family}.py", package / "compat" / f"{family}.py") if p.exists()),
                 package / "rules" / f"{family}.py")
 
@@ -84,7 +84,7 @@ def family_module(family: str) -> str:
 
 def family_keys(family: str) -> list[str]:
     """The keys the family registers (the keys of its spec's ``handlers``)."""
-    from satsimp.identities import family_spec
+    from satsimp.methods.refine.identities import family_spec
     return list(family_spec(family).handlers)
 
 
@@ -101,7 +101,7 @@ def _table_parts(handler) -> list:
 
 def ablate(family: str, drop: list[int]) -> list[str]:
     """Remove ``RULES[i]`` for ``i`` in ``drop`` from every table of the module; describe what was removed."""
-    from satsimp.identities.compat.upstream import handlers_dict
+    from satsimp.methods.refine.identities.compat.upstream import handlers_dict
     mod = importlib.import_module(family_module(family))
     rules = list(mod.RULES)
     gone = [_norm(rules[i]) for i in drop]
@@ -176,8 +176,8 @@ def soundness(family: str, seed: int, cases: int, timeout: int) -> dict:
 
 def worker(args) -> None:
     sys.path.insert(0, str(TESTS))
-    import satsimp
-    assert satsimp.HANDLERS_PACKAGE == "handlers_identities", satsimp.HANDLERS_PACKAGE
+    import satsimp.methods.refine
+    assert satsimp.methods.refine.HANDLERS_PACKAGE == "handlers_identities", satsimp.methods.refine.HANDLERS_PACKAGE
     drop = [int(i) for i in args.drop.split(",") if i != ""] if args.drop else []
     t0 = time.time()
     result = {"family": args.family, "drop": drop, "removed": ablate(args.family, drop)}
@@ -324,7 +324,7 @@ def main(argv=None) -> None:
     base = measure(args, [], all_gates)
     if args.keep_baseline:
         Path(args.keep_baseline).write_text(json.dumps(base))
-    import satsimp  # noqa: F401  (only to read the rows for printing, in the parent)
+    import satsimp.methods.refine  # noqa: F401  (only to read the rows for printing, in the parent)
     rules = importlib.import_module(family_module(args.family)).RULES
     print(f"family {args.family}: {len(rules)} rows, keys {', '.join(family_keys(args.family))}")
     print(f"baseline: {summary(base)} ({base['seconds']:.0f}s)")

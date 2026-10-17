@@ -1,4 +1,4 @@
-"""Tests for ``satsimp.reference.v3.complex_parts``.
+"""Tests for ``satsimp.methods.refine.reference.v3.complex_parts``.
 
 Every positive test asserts the exact refined form and then checks it
 numerically with :func:`satsimp.harness.assert_refinement_valid`, whose
@@ -18,7 +18,7 @@ from sympy import (Abs, I, Mul, Rational, S, Symbol, arg, conjugate, cos, cosh,
 from sympy.assumptions import Q
 
 from satsimp import refine
-from satsimp.reference.v3 import complex_parts
+from satsimp.methods.refine.reference.v3 import complex_parts
 from satsimp.testing.harness import assert_refinement_valid
 
 x, y, z, t, w = symbols('x y z t w')
@@ -58,7 +58,7 @@ def bounded(seconds):
 # --------------------------------------------------------------------------
 
 def test_registered_handlers():
-    from satsimp.identities.compat.upstream import handlers_dict
+    from satsimp.methods.refine.identities.compat.upstream import handlers_dict
     for key in ('re', 'im', 'arg', 'sign', 'Abs', 'conjugate', 'Mul'):
         assert handlers_dict[key].__module__ == complex_parts.__name__
 

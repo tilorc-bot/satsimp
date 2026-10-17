@@ -138,7 +138,7 @@ def test_table_size():
     """Five Piecewise definitions (Max, Min, KroneckerDelta with and without a
     range, Heaviside), three DiracDelta rule rows and four rows for an infinite
     argument of Max/Min."""
-    from satsimp.identities.rules import minmax_deltas as mod
+    from satsimp.methods.refine.identities.rules import minmax_deltas as mod
     assert (len(mod.FACTS), len(mod.RULES)) == (5, 7)
 
 
@@ -171,7 +171,7 @@ def test_both_relations_refuted_stays(expr):
     # argument (a relation says its sides are extended reals).  Max/Min have no
     # default branch, so the definition does not fire: no nan.
     from unittest import mock
-    from satsimp.identities.core import prove
+    from satsimp.engine import prove
     decide = prove.decide
 
     def refuting(cond, assumptions):

@@ -18,7 +18,7 @@ from typing import Any
 
 import pytest
 
-from satsimp.identities.compat import backend
+from satsimp.engine import backend
 from sympy import Matrix, Q, S, eye, simplify, sqrt
 from sympy.abc import i, j, n, x
 from sympy.assumptions.refine import refine as sympy_refine

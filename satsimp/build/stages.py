@@ -5,7 +5,7 @@ the stage 0 rows) or a generated rule (``generated/<family>.py``).  Families
 are generated in stage order (:data:`STAGES`); each family is specialized with
 its own keys on their identity rows and every other key through the tables
 generated so far (the stages' own dict of installed tables, supplied to the
-driver by an observer, :func:`..identities.core.driver.observing`), so a
+driver by an observer, :func:`satsimp.engine.driver.observing`), so a
 later stage builds on the compiled rules of the earlier ones.  Rules are
 verified before they are installed, every round.  A round regenerates the
 families whose inputs changed since their last generation: the tables at the
@@ -26,8 +26,8 @@ from typing import Any, Callable
 
 from sympy import sympify
 
-from ..identities.core import driver as _dispatch
-from ..identities.core.rewrite import Row, rule_handler
+from ..engine import driver as _dispatch
+from ..engine.rewrite import Row, rule_handler
 from . import specialize as _specialize
 from .render import table_order
 
@@ -138,7 +138,7 @@ def row_labels(generated: dict[str, dict] | None = None) -> dict[tuple, str]:
     """``row -> "family.TABLE[i]"`` for the stated rows of every family module, and
     ``"family.generated[i]"`` for the rows of the generated tables in ``generated``."""
     import importlib
-    from ..identities import families, family_module_name
+    from ..methods.refine.identities import families, family_module_name
     labels: dict[tuple, str] = {}
     for family in families():
         for name, rows in _specialize.row_tables(importlib.import_module(family_module_name(family))).items():

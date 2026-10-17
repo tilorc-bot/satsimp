@@ -22,7 +22,7 @@ from typing import Any
 import pytest
 
 
-from satsimp.identities.compat import backend
+from satsimp.engine import backend
 from sympy.assumptions import Q
 from sympy.assumptions.ask import ask as sympy_ask
 from sympy.assumptions.refine import refine as sympy_refine
@@ -48,7 +48,8 @@ from sympy.functions.special.gamma_functions import gamma
 from sympy.functions.special.tensor_functions import KroneckerDelta
 from sympy.matrices.expressions.matexpr import MatrixSymbol
 
-from satsimp import HANDLERS_PACKAGE, refine
+from satsimp import refine
+from satsimp.methods.refine import HANDLERS_PACKAGE
 from satsimp.testing.harness import (
     assert_refinement_valid,
     assert_refines_like_sympy,

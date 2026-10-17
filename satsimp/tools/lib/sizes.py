@@ -2,12 +2,13 @@
 
 Code lines are physical lines that are not blank, not comments and not
 module, class or function docstrings.  The engine is the former underscore
-modules of ``handlers_identities``: online, ``satsimp/identities`` without
-the families, the generated tables, the ``ask`` backend and the vendored
+modules of ``handlers_identities``: online, ``satsimp/engine`` and
+``satsimp/methods/refine/identities`` without the families, the generated
+tables, the ``ask`` backend (``engine/backend.py``) and the vendored
 SymPy dispatcher (``compat/upstream.py``, ``satrefine/_upstream.py`` before
 phase 3, never counted); offline,
 ``satsimp/build`` (specialisation, fixpoint).  Rows are counted from each
-family's spec (:func:`satsimp.identities.family_spec`): its table
+family's spec (:func:`satsimp.methods.refine.identities.family_spec`): its table
 kinds ``facts``, ``exp_forms``, ``rules``, ``ranges``, counting only rows the
 module states in its own public tables (not the shared ``ZERO`` row, not another
 family's exponential forms); ``stage0`` is every stated row.
@@ -34,8 +35,8 @@ def _size(module, name: str) -> int:
 def family_rows() -> list[tuple[str, Counter]]:
     """(family, counts) for every family: ``COLUMNS``, ``STAGE0`` and ``GENERATED``
     (the size of ``generated/<family>.py``, 0 if there is none)."""
-    from satsimp.identities import families, family_module_name, family_spec
-    from satsimp.identities.rules._tables import ZERO
+    from satsimp.methods.refine.identities import families, family_module_name, family_spec
+    from satsimp.methods.refine.identities.rules._tables import ZERO
     out = []
     for name in families():
         mod = importlib.import_module(family_module_name(name))
@@ -47,7 +48,7 @@ def family_rows() -> list[tuple[str, Counter]]:
         counts["SIMPLE_RULES"] = 0
         counts["STAGE0"] = sum(counts.values())
         try:
-            gen = importlib.import_module(f"satsimp.identities.generated.{name}")
+            gen = importlib.import_module(f"satsimp.methods.refine.identities.generated.{name}")
             counts["GENERATED"] = _size(gen, "RULES")
         except ModuleNotFoundError:
             counts["GENERATED"] = 0
@@ -70,15 +71,16 @@ def code_lines(path: Path) -> int:
 
 
 def family_paths() -> dict[str, Path]:
-    from satsimp.identities import families, family_module_name
+    from satsimp.methods.refine.identities import families, family_module_name
     return {f: ROOT / (family_module_name(f).replace(".", "/") + ".py") for f in families()}
 
 
 def engine_paths() -> tuple[list[Path], list[Path]]:
     """The engine's modules, ``(online, offline)`` (see the module docstring)."""
-    package = ROOT / "satsimp/identities"
-    skip = set(family_paths().values()) | {package / "compat/backend.py", package / "compat/upstream.py"}
-    online = sorted(p for p in package.rglob("*.py") if p not in skip and "generated" not in p.parts
+    engine, package = ROOT / "satsimp/engine", ROOT / "satsimp/methods/refine/identities"
+    skip = set(family_paths().values()) | {engine / "backend.py", package / "compat/upstream.py"}
+    online = sorted(p for p in [*engine.glob("*.py"), *package.rglob("*.py")]
+                    if p not in skip and "generated" not in p.parts
                     and not (p.name == "__init__.py" and code_lines(p) == 0))
     offline = sorted(p for p in (ROOT / "satsimp/build").glob("*.py") if p.name != "__init__.py" or code_lines(p))
     return online, offline

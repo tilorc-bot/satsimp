@@ -25,7 +25,7 @@ import sys
 
 import pytest
 
-if "satsimp" not in sys.modules:
+if "satsimp.methods.refine" not in sys.modules:
     os.environ["SATREFINE_HANDLERS"] = "handlers_v3"
 
 from battery_v3 import BATTERY
@@ -35,8 +35,8 @@ from satsimp import refine
 from satsimp.testing.harness import assert_refinement_valid
 
 _OTHER_PACKAGES = ("handlers", "handlers_v2", "handlers_identities")
-V3_LOADED = "satsimp.handlers_v3" in sys.modules and not any(
-    "satsimp." + name in sys.modules for name in _OTHER_PACKAGES)
+V3_LOADED = "satsimp.methods.refine.handlers_v3" in sys.modules and not any(
+    "satsimp.methods.refine." + name in sys.modules for name in _OTHER_PACKAGES)
 
 def _known_oracle_limit(expr, assumptions, expected, source):
     """Why the numeric oracle's mismatch on this case is not a wrong refinement, or None."""

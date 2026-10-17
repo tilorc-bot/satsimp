@@ -506,7 +506,7 @@ def mat_compare(left, right, points, ref=None):
 
 
 class MatrixRowCoverage:
-    """Counts, per row of ``satsimp.identities.compat.matrices``, how often it fired.
+    """Counts, per row of ``satsimp.methods.refine.identities.compat.matrices``, how often it fired.
 
     Inside the ``with`` block every matrix key's handler is wrapped; when it
     returns a rewrite, the first row that alone gives the same rewrite is
@@ -518,9 +518,9 @@ class MatrixRowCoverage:
         self.saved = {}
 
     def __enter__(self):
-        from satsimp.identities import family_spec
-        from satsimp.identities.compat.upstream import handlers_dict
-        from satsimp.identities.core.rewrite import rule_handler
+        from satsimp.methods.refine.identities import family_spec
+        from satsimp.methods.refine.identities.compat.upstream import handlers_dict
+        from satsimp.engine.rewrite import rule_handler
         tables = {key: part.rows for key, part in family_spec("matrices").handlers.items()}   # one rule table per key
         self.all_rows = [row for rows in tables.values() for row in rows]
         for key, rows in tables.items():
@@ -540,7 +540,7 @@ class MatrixRowCoverage:
         return self
 
     def __exit__(self, *exc):
-        from satsimp.identities.compat.upstream import handlers_dict
+        from satsimp.methods.refine.identities.compat.upstream import handlers_dict
         handlers_dict.update(self.saved)
         return False
 

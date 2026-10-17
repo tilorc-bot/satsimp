@@ -118,8 +118,9 @@ from sympy.assumptions.refine import refine as sympy_refine  # noqa: E402
 from sympy.core.relational import Relational  # noqa: E402
 
 import satsimp  # noqa: E402
-from satsimp.identities.compat import backend as sat_backend  # noqa: E402
-from satsimp.identities.compat import upstream as _upstream  # noqa: E402
+import satsimp.methods.refine  # noqa: E402,F401  (loads the selected handler package)
+from satsimp.engine import backend as sat_backend  # noqa: E402
+from satsimp.methods.refine.identities.compat import upstream as _upstream  # noqa: E402
 from satsimp.tools.lib.report import table  # noqa: E402
 from satsimp.tools.lib.workers import Timeout, attempt, install_timeouts, run_forked, timed  # noqa: E402
 from satsimp.tools.lib.workers import outer_expired as _outer_expired  # noqa: E402

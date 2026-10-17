@@ -1,7 +1,9 @@
 """Fixtures for the ``handlers_identities`` tests.
 
-The layout follows the package: ``core/``, ``rules/``, ``compat/``, ``build/``
-and ``tools/`` test the modules of the same name; the per-bug regressions are
+The layout follows the package: ``core/`` tests the engine (``satsimp/engine``,
+``core/`` before the split into engine and methods), ``rules/`` and ``compat/``
+refine's modules of the same name (``compat/`` also the ``ask`` backend,
+``satsimp/engine/backend.py``), ``build/`` and ``tools/`` the offline packages; the per-bug regressions are
 rows of ``regressions.py``; ``needs/`` holds open requests.
 
 Selects the package before ``satsimp`` is imported so a plain
@@ -18,8 +20,9 @@ import pytest
 
 os.environ.setdefault("SATREFINE_HANDLERS", "handlers_identities")
 os.environ.setdefault("SATREFINE_STRICT_LOOPS", "1")   # a tripped loop guard fails the test
-if "satsimp" in sys.modules and "satsimp." + os.environ["SATREFINE_HANDLERS"] not in sys.modules:
-    raise RuntimeError("satsimp was imported before conftest selected the handler package")
+if "satsimp.methods.refine" in sys.modules and \
+        "satsimp.methods.refine." + os.environ["SATREFINE_HANDLERS"] not in sys.modules:
+    raise RuntimeError("satsimp.methods.refine was imported before conftest selected the handler package")
 
 from satsimp.testing.harness import query_scope_recorder  # noqa: E402
 

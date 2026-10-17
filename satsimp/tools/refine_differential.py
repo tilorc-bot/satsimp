@@ -76,7 +76,8 @@ def worker(package, seed, cases, out, timeout, matrices=False, ext=False):
     import json
 
     os.environ.setdefault("SATREFINE_STRICT_LOOPS", "1")   # a tripped loop guard is a crash here
-    assert sys.modules.get("satsimp." + package) is not None, f"satsimp.{package} was not loaded"
+    assert sys.modules.get("satsimp.methods.refine." + package) is not None, \
+        f"satsimp.methods.refine.{package} was not loaded"
     backend_from_env()
     install_case_alarm()
     gen = _generator(matrices, ext)

@@ -6,7 +6,7 @@ branch bookkeeping collapsed, minus profiles strictly stronger than another
 with the same result and rules equal under a symmetry of the left side.
 :func:`generate_family` runs it over a family's identity rows and keeps the
 rules :func:`.verify.verify` confirms numerically; :mod:`.render` writes them
-out as a module under ``satsimp/identities/generated/``.
+out as a module under ``satsimp/methods/refine/identities/generated/``.
 """
 from __future__ import annotations
 
@@ -17,11 +17,11 @@ from typing import Any, Iterable
 
 from sympy import And, Q, S, arg, expand, floor, im, true
 
-from ..identities.compat import upstream as _upstream
+from ..methods.refine.identities.compat import upstream as _upstream
 from . import hooks
-from ..identities.core import hooks as _hooks
-from ..identities.core.driver import live
-from ..identities.core.rewrite import Row, refine
+from ..engine import hooks as _hooks
+from ..engine.driver import live
+from ..engine.rewrite import Row, refine
 from .verify import verify
 
 class Literal:
@@ -172,6 +172,6 @@ def generate_family(module: types.ModuleType) -> tuple[list[Row], list[str], dic
 def family_modules() -> list[types.ModuleType]:
     """The family modules of the package that register an identity handler, except
     those in :data:`.specs.NOT_GENERATED`."""
-    from ..identities import family_modules as all_families
+    from ..methods.refine.identities import family_modules as all_families
     from .specs import NOT_GENERATED
     return [mod for mod in all_families() if identity_keys(mod) and mod.__name__.rsplit(".", 1)[-1] not in NOT_GENERATED]

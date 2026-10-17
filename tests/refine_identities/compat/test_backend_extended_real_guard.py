@@ -1,7 +1,7 @@
 """The combined backend's guard on SymPy's ``Q.extended_real`` handler for powers.
 
 SymPy calls ``sqrt(z)`` extended real for a negative ``z``; the guard
-(``_extended_real_true_checked`` in ``satsimp/identities/compat/backend.py``)
+(``_extended_real_true_checked`` in ``satsimp/engine/backend.py``)
 keeps a ``True`` for a power only for an integer exponent, or an extended
 nonnegative base and a real exponent.  Without it, ``conjugate(a) -> a`` for
 ``Q.extended_real(a)`` fires on ``sqrt(z)`` when satassume leaves the query
@@ -12,7 +12,7 @@ from __future__ import annotations
 from sympy import Q, Symbol, conjugate, sqrt
 
 from satsimp import refine
-from satsimp.identities.compat import backend
+from satsimp.engine import backend
 
 z = Symbol('z')
 

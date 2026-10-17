@@ -232,5 +232,5 @@ def test_symmetric_element_symbolic_order():
 
 
 def test_table_size():
-    from satsimp.identities.compat import matrices as mod
+    from satsimp.methods.refine.identities.compat import matrices as mod
     assert len(mod.RULES) == 30

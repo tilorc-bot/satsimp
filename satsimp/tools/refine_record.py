@@ -11,7 +11,7 @@ import argparse, pickle, time
 _ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
 _ap.add_argument("out", help="the pickle to write")
 _args = _ap.parse_args()
-import satsimp, satsimp.identities.compat.backend as B
+import satsimp, satsimp.methods.refine, satsimp.engine.backend as B
 from tests.refine_identities.battery_v3 import BATTERY
 B.set_backend("satassume")
 orig = B._satassume_ask

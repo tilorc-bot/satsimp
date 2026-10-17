@@ -136,5 +136,5 @@ def test_refusal(expr, assumptions):
 
 
 def test_table_size():
-    from satsimp.identities.rules import combinatorial as mod
+    from satsimp.methods.refine.identities.rules import combinatorial as mod
     assert len(mod.RULES) == 17

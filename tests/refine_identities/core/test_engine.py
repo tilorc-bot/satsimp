@@ -6,13 +6,13 @@ from sympy import (Abs, Function, I, N, Q, Rational, S, cos, exp, floor, frac, i
                    symbols, true)
 
 from satsimp import refine
-from satsimp.identities.compat.upstream import handlers_dict
-from satsimp.identities.config import MODE_ENV_VAR
-from satsimp.identities.core import driver as _dispatch
-from satsimp.identities.core.match import bindings, part, subst
-from satsimp.identities.core.prove import provable
-from satsimp.identities.core.rewrite import identity_handler, rule_handler
-from satsimp.identities.rules._wraps import fractional, principal, reflect_full, reflect_half, sawtooth
+from satsimp.methods.refine.identities.compat.upstream import handlers_dict
+from satsimp.engine.config import MODE_ENV_VAR
+from satsimp.engine import driver as _dispatch
+from satsimp.engine.match import bindings, part, subst
+from satsimp.engine.prove import provable
+from satsimp.engine.rewrite import identity_handler, rule_handler
+from satsimp.methods.refine.identities.rules._wraps import fractional, principal, reflect_full, reflect_half, sawtooth
 
 x, y, n, r, a, b, p, q = symbols("x y n r a b p q")
 F = Function("F")
@@ -81,7 +81,7 @@ def test_structure_beside_a_rest_symbol():
 
 def test_sub_product_at_the_top_keeps_the_other_factors():
     from sympy import conjugate
-    from satsimp.identities.core.match import REBUILD
+    from satsimp.engine.match import REBUILD
     w = symbols("w")
     found = [m for m in bindings(w*conjugate(w), 2*x*y*conjugate(x)) if m[w] == x]
     assert found and found[0][REBUILD](Abs(x)**2) == 2*y*Abs(x)**2
@@ -166,7 +166,7 @@ def relaxed_log(monkeypatch):
     (SymPy's zoo arithmetic makes log(0*r) == log(0) + log(r))."""
     from sympy import true
     monkeypatch.setenv(MODE_ENV_VAR, "live")
-    from satsimp.identities.rules._tables import derive, principal
+    from satsimp.methods.refine.identities.rules._tables import derive, principal
     z, b_, e_, p_, r_ = symbols("z b e p r")
     facts = [(log(exp(z)), principal(z), true), (log(x), log(Abs(x)) + I*arg_(x), ~Q.zero(x))]
     forms = [(b_**e_, e_*log(b_), ~Q.zero(b_) | ~Q.zero(e_)), (p_*r_, log(p_) + log(r_), true)]
@@ -213,8 +213,8 @@ def test_floor_of_a_bounded_symbol():
 
 
 def test_two_valued_floor_and_endpoint_split():
-    from satsimp.identities.rules._simple import floor_two_valued
-    from satsimp.identities.core.split import endpoint_split
+    from satsimp.methods.refine.identities.rules._simple import floor_two_valued
+    from satsimp.engine.split import endpoint_split
     t = symbols("t")
     closed = Q.ge(t, -pi/2) & Q.le(t, pi/2)
     assert floor_two_valued(floor(t/pi + S.Half), closed) == (0, t, pi/2, 1)

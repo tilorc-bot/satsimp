@@ -10,10 +10,10 @@ from __future__ import annotations
 from sympy import Abs, Function, Max, Or, Piecewise, Q, S, floor, im, re, symbols
 
 from satsimp import refine
-from satsimp.identities.compat import backend
-from satsimp.identities.core import driver as _dispatch
-from satsimp.identities.core.prove import by_cases, decide, provable
-from satsimp.identities.core.rewrite import identity_handler, rule_handler
+from satsimp.engine import backend
+from satsimp.engine import driver as _dispatch
+from satsimp.engine.prove import by_cases, decide, provable
+from satsimp.engine.rewrite import identity_handler, rule_handler
 
 a, b, n, x, y, z = symbols('a b n x y z')
 
@@ -77,7 +77,7 @@ def test_an_or_marked_by_cases_is_asked_whole():
 def test_only_a_marked_or_is_asked_whole(monkeypatch):
     """Any other ``Or`` costs no whole ask (#50 asked every ``Or`` with two
     undecided alternatives: +10% on the battery, nothing proved there)."""
-    from satsimp.identities.core import hooks
+    from satsimp.engine import hooks
     asked = []
     real = hooks.ask_whole
     monkeypatch.setattr(hooks, "ask_whole", lambda c, a: asked.append(c) or real(c, a))
@@ -123,7 +123,7 @@ def test_undecided_definition_declines_without_a_split():
 
 
 def test_a_table_can_switch_the_case_split_off(monkeypatch):
-    from satsimp.identities.core import rewrite as _engine
+    from satsimp.engine import rewrite as _engine
     splits = []
     monkeypatch.setattr(_engine, "case_split", lambda *args: splits.append(args) and None)
     Book = Function('Book')                                  # bookkeeping nothing collapses
@@ -144,7 +144,7 @@ def test_repeated_work_is_done_once():
         calls.append(expr)
         return expr.args[0] if expr.args[0].is_Symbol else None
 
-    from satsimp.identities.compat.upstream import handlers_dict
+    from satsimp.methods.refine.identities.compat.upstream import handlers_dict
     handlers_dict['F'] = once
     try:
         big = sum(F(x)*k for k in range(1, 2*_dispatch.MAX_FIRINGS))

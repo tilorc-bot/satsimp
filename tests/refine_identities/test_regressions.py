@@ -8,8 +8,8 @@ from contextlib import nullcontext
 import pytest
 
 from satsimp import refine
-from satsimp.identities.compat import backend
-from satsimp.identities.core import driver
+from satsimp.engine import backend
+from satsimp.engine import driver
 
 from regressions import CASES, Case, holds
 

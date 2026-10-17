@@ -30,7 +30,7 @@ from satsimp.tools.lib.select import select  # noqa: E402
 select(handlers="handlers_identities")
 os.environ["SATREFINE_IDENTITIES"] = "live"
 
-import satsimp  # noqa: E402,F401  (loads the identity package)
+import satsimp.methods.refine  # noqa: E402,F401  (loads the identity package)
 from satsimp.build import stages as _stages  # noqa: E402
 from satsimp.build.render import generated_path, render_module  # noqa: E402
 
@@ -52,7 +52,7 @@ def main() -> None:
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("--family", action="append", help="family module name (repeatable): regenerate only these, "
                    "against the committed tables of the others")
-    p.add_argument("--write", action="store_true", help="write satsimp/identities/generated/<family>.py")
+    p.add_argument("--write", action="store_true", help="write satsimp/methods/refine/identities/generated/<family>.py")
     p.add_argument("--quiet", action="store_true", help="do not list the rules")
     args = p.parse_args()
     t0 = time.time()
@@ -71,7 +71,7 @@ def main() -> None:
         for module in _stages.ordered_families():
             fam = _stages.family_name(module)
             try:
-                others[fam] = {"rules": importlib.import_module(f"satsimp.identities.generated.{fam}").RULES}
+                others[fam] = {"rules": importlib.import_module(f"satsimp.methods.refine.identities.generated.{fam}").RULES}
             except ImportError:
                 pass
         labels = _stages.row_labels(others)

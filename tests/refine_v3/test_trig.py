@@ -1,4 +1,4 @@
-"""Tests for ``satsimp/reference/v3/trig.py``.
+"""Tests for ``satsimp/methods/refine/reference/v3/trig.py``.
 
 Every positive case is checked twice: against an expected closed form and
 numerically (``assert_refinement_valid``) at integer shifts k in
@@ -14,9 +14,10 @@ from sympy import (
 )
 from sympy.core.basic import Basic
 
-from satsimp import handlers_dict, refine
+from satsimp import refine
+from satsimp.methods.refine import handlers_dict
 from satsimp.testing.harness import assert_refinement_valid, stub_ask, use_ask
-from satsimp.reference.v3 import trig
+from satsimp.methods.refine.reference.v3 import trig
 
 x = Symbol('x')
 y = Symbol('y')

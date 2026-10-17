@@ -1,68 +1,24 @@
-"""Assumption-driven refinement backed by the independent engine.
+"""Simplification methods as rule tables, with conditions proved by satassume's ``ask``.
 
-The vendored dispatcher and initial handlers live in
-:mod:`satsimp.identities.compat.upstream`; the handler package selected
-with ``SATREFINE_HANDLERS`` (default ``handlers_identities``; the reference
-``handlers_v3``) registers its handlers into ``handlers_dict`` when this
-package is imported.
+``satsimp.refine(expr, assumptions)`` is SymPy's ``refine`` rewritten this way
+(:mod:`satsimp.methods.refine`).  The shared machinery is :mod:`satsimp.engine`;
+each method is a package under :mod:`satsimp.methods` (``docs/architecture.md``).
+
+A method is imported when it is first used, so importing :mod:`satsimp` loads
+none of them and one method never pays for another's import.
 """
 from __future__ import annotations
 
-import importlib
-import pkgutil
-
-from .identities.compat.upstream import (
-    ask,
-    handlers_dict,
-    refine,
-    refine_Heaviside,
-    refine_Pow,
-    refine_abs,
-    refine_arg,
-    refine_atan2,
-    refine_exp,
-    refine_floor_ceiling,
-    refine_im,
-    refine_matrixelement,
-    refine_re,
-    refine_sign,
-    refine_sin_cos,
-)
-
-__all__ = [
-    "ask",
-    "handlers_dict",
-    "refine",
-    "refine_Heaviside",
-    "refine_Pow",
-    "refine_abs",
-    "refine_arg",
-    "refine_atan2",
-    "refine_exp",
-    "refine_floor_ceiling",
-    "refine_im",
-    "refine_matrixelement",
-    "refine_re",
-    "refine_sign",
-    "refine_sin_cos",
-]
+__all__ = ["refine"]
 
 
-from .identities.config import DEFAULT_HANDLERS, HANDLERS_ENV_VAR, handlers_package  # noqa: E402,F401  (re-exported)
-
-HANDLERS_PACKAGE = handlers_package()
-"""Name of the handler package this process loaded (fixed at import)."""
-
-
-def _load_handlers() -> None:
-    """Import every public module in the selected handler package."""
-    package = importlib.import_module(__name__ + "." + HANDLERS_PACKAGE)
-    path = getattr(package, "__path__", None)
-    if path is None:
-        return
-    for info in pkgutil.iter_modules(path):
-        if not info.name.startswith("_"):
-            importlib.import_module(f"{package.__name__}.{info.name}")
+def __getattr__(name: str):
+    if name == "refine":
+        from .methods.refine import refine
+        globals()["refine"] = refine   # later lookups are plain attribute reads
+        return refine
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 
-_load_handlers()
+def __dir__() -> list[str]:
+    return sorted(set(globals()) | set(__all__))

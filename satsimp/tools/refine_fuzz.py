@@ -35,7 +35,7 @@ from sympy import sympify
 from sympy.assumptions.refine import refine as sympy_refine
 from sympy.core.basic import Basic
 
-import satsimp
+import satsimp.methods.refine
 from satsimp import refine as sat_refine
 from satsimp.tools.lib.grammar import case_rng, ext_generate, scalar_case
 from satsimp.tools.lib.matrices import MatrixRowCoverage, mat_compare, mat_generate, mat_points, short
@@ -123,7 +123,7 @@ def mat_main(seed=0, cases=1000):
     fired, tried, checked_cases, unchecked, unsound, crashes, nopoint, sympy_unsound = (
         Counter(), Counter(), Counter(), [], [], [], 0, [])
     t0 = time.time()
-    coverage = MatrixRowCoverage() if satsimp.HANDLERS_PACKAGE == "handlers_identities" else None
+    coverage = MatrixRowCoverage() if satsimp.methods.refine.HANDLERS_PACKAGE == "handlers_identities" else None
     if coverage:
         coverage.__enter__()
     for case in range(cases):

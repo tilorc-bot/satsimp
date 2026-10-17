@@ -1,4 +1,4 @@
-"""Tests for ``satsimp.reference.v3.combinatorial``.
+"""Tests for ``satsimp.methods.refine.reference.v3.combinatorial``.
 
 Each rule has a positive test, a numeric check that the original and the
 refined expression agree at explicit points satisfying the precondition

@@ -28,8 +28,8 @@ from sympy import Abs, I, MatrixSymbol, Q, Symbol, ZeroMatrix, arg, exp, log, sq
 from sympy.assumptions.ask import ask as sympy_ask
 
 from satsimp import refine
-from satsimp.identities.compat import backend
-from satsimp.identities.compat.backend import ask
+from satsimp.engine import backend
+from satsimp.engine.backend import ask
 
 x, y, z, b, c = Symbol('x'), Symbol('y'), Symbol('z'), Symbol('b'), Symbol('c')
 

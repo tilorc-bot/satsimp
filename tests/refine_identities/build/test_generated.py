@@ -10,9 +10,9 @@ import pytest
 from sympy import I, Q, log, pi, srepr, symbols, sympify
 
 from satsimp.build import stages as _stages
-from satsimp.identities.config import MODE_ENV_VAR
-from satsimp.identities.core import driver as _dispatch
-from satsimp.identities.core.prove import ByCases
+from satsimp.engine.config import MODE_ENV_VAR
+from satsimp.engine import driver as _dispatch
+from satsimp.engine.prove import ByCases
 from satsimp.build.render import generated_path
 from satsimp.build.specialize import family_modules
 
@@ -88,7 +88,7 @@ def test_generated_module_is_up_to_date(module, monkeypatch):
     family = module.__name__.rsplit(".", 1)[-1]
     path = generated_path(family)
     assert path.exists(), f"run satsimp/tools/refine_specialize.py --write --family {family}"
-    committed = importlib.import_module(f"satsimp.identities.generated.{family}")
+    committed = importlib.import_module(f"satsimp.methods.refine.identities.generated.{family}")
     # the fixpoint property: regenerating the family against the committed tables of
     # the others (its own keys live) gives its committed table (see _stages)
     rules, _keys, _verdicts = _stages.generate_one(module)

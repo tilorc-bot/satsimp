@@ -123,7 +123,7 @@ def dump(out: str, seed: int, cases: int, timeout: int, expect: str | None = Non
     from satsimp.tools.lib.select import select
     select(handlers=PACKAGE)
     os.environ.setdefault("SATREFINE_STRICT_LOOPS", "1")   # a tripped loop guard is a crash here
-    import satsimp  # noqa: F401
+    import satsimp.methods.refine  # noqa: F401
 
     version = satassume_version()
     if expect is not None and version != expect:

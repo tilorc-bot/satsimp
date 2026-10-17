@@ -3,7 +3,8 @@ from __future__ import annotations
 import pytest
 from typing import Any, Callable
 from sympy.assumptions.ask import Q
-from satsimp import refine, refine_sin_cos
+from satsimp import refine
+from satsimp.methods.refine import refine_sin_cos
 from sympy.calculus.accumulationbounds import AccumBounds
 from sympy.core.expr import Expr
 from sympy.core.numbers import (I, Rational, nan, pi)

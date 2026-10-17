@@ -14,8 +14,9 @@ import sys
 import pytest
 
 os.environ.setdefault("SATREFINE_HANDLERS", "handlers_v3")
-if "satsimp" in sys.modules and "satsimp." + os.environ["SATREFINE_HANDLERS"] not in sys.modules:
-    raise RuntimeError("satsimp was imported before conftest selected the handler package")
+if "satsimp.methods.refine" in sys.modules and \
+        "satsimp.methods.refine." + os.environ["SATREFINE_HANDLERS"] not in sys.modules:
+    raise RuntimeError("satsimp.methods.refine was imported before conftest selected the handler package")
 
 from satsimp.testing.harness import query_scope_recorder  # noqa: E402
 

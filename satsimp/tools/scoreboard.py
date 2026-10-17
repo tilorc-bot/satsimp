@@ -144,7 +144,7 @@ def run_battery(cases: list, show: bool, families: list | None = None) -> None:
             print(f"  {out.key:38s} {line}")
     total = sum(counts[k] for k in bat.KEYS)
     try:
-        from satsimp.identities.core.driver import non_basic_returns
+        from satsimp.engine.driver import non_basic_returns
     except ImportError:
         non_basic_returns = {}
     if non_basic_returns:
@@ -185,7 +185,7 @@ def run_battery(cases: list, show: bool, families: list | None = None) -> None:
 def battery(args) -> int:
     select(handlers=args.handlers)
     os.environ.setdefault("SATREFINE_STRICT_LOOPS", "1")   # a tripped loop guard is a crash here
-    import satsimp  # noqa: F401
+    import satsimp.methods.refine  # noqa: F401
     if args.handlers == "handlers_identities":
         print_rows()
         print_code_lines()

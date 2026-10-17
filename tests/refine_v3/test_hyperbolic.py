@@ -1,4 +1,4 @@
-"""Tests for ``satsimp.reference.v3.hyperbolic``.
+"""Tests for ``satsimp.methods.refine.reference.v3.hyperbolic``.
 
 Each rule gets a symbolic test (``refine`` with assumptions on ``k``) and a
 numeric soundness check, with ``x`` sampled at real and complex points and
@@ -14,9 +14,9 @@ from sympy import (
     symbols, tanh, zoo)
 
 from satsimp import refine
-from satsimp.identities.compat.upstream import handlers_dict
+from satsimp.methods.refine.identities.compat.upstream import handlers_dict
 from satsimp.testing.harness import assert_refinement_valid
-from satsimp.reference.v3 import hyperbolic
+from satsimp.methods.refine.reference.v3 import hyperbolic
 
 x, k, n = symbols("x k n")
 y = Symbol("y", real=True)

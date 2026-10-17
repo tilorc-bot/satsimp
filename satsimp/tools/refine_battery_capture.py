@@ -32,8 +32,9 @@ import pytest
 from sympy import Basic, srepr
 
 import satsimp
-import satsimp.reference.v3 as pkg
-from satsimp.identities.compat import upstream as _upstream
+import satsimp.methods.refine
+import satsimp.methods.refine.reference.v3 as pkg
+from satsimp.methods.refine.identities.compat import upstream as _upstream
 
 ORIG_REFINE = _upstream.refine
 ORIG_ASK = _upstream.ask
@@ -85,7 +86,7 @@ def make_handler_wrapper(name, fn):
 
 
 _upstream.refine = refine_wrapper
-satsimp.refine = refine_wrapper
+satsimp.refine = satsimp.methods.refine.refine = refine_wrapper
 
 mods = [importlib.import_module(f"{pkg.__name__}.{i.name}") for i in pkgutil.iter_modules(pkg.__path__)]
 orig_to_wrap = {}

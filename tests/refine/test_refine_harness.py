@@ -20,7 +20,7 @@ from satsimp.testing.harness import (
 
 
 def test_reference_ask_restores_state() -> None:
-    import satsimp.identities.compat.upstream as upstream
+    import satsimp.methods.refine.identities.compat.upstream as upstream
 
     original = upstream.ask
     with reference_ask():
@@ -80,7 +80,7 @@ def test_recording_ask_logs_with_stub() -> None:
 
 
 def test_use_ask_patches_module_attribute() -> None:
-    import satsimp.identities.compat.upstream as upstream
+    import satsimp.methods.refine.identities.compat.upstream as upstream
 
     fake = stub_ask({})
     with use_ask(fake):

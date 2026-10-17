@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from sympy import Function, KroneckerDelta, Max, Min, Q, S, symbols
 
-from satsimp.identities.core.rewrite import rule_handler
+from satsimp.engine.rewrite import rule_handler
 
 a, b, i, j, r, x, y, z = symbols('a b i j r x y z')
 G = Function('G')

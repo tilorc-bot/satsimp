@@ -150,7 +150,7 @@ def test_relation_to_team(expr, assumptions, team, relation):
 
 
 def test_row_counts():
-    from satsimp.identities.rules import power_exp_log as m
+    from satsimp.methods.refine.identities.rules import power_exp_log as m
     assert len(m.FACTS) == 4 and len(m.EXP_FORMS) == 3
 
 

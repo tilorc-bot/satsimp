@@ -13,7 +13,7 @@ Three kinds of oracle are provided:
   with the original; it does not consult ``ask`` at all.
 
 Handlers must call ``ask`` as an attribute of
-``satsimp.identities.compat.upstream`` (never import it by value) for the ask
+``satsimp.methods.refine.identities.compat.upstream`` (never import it by value) for the ask
 patches here to reach them.
 """
 from __future__ import annotations
@@ -40,9 +40,9 @@ AskLog = list[tuple[Any, Any, bool | None]]
 def use_ask(fake_ask: Ask) -> Iterator[None]:
     """Patch the module-global ``ask`` that every handler calls.  The identity
     engine then decides conditions connective by connective only, as for
-    SymPy's ``ask`` (no whole ``Or``; :data:`satsimp.identities.core.hooks.ask_whole`)."""
-    import satsimp.identities.compat.upstream as upstream
-    from satsimp.identities.core import hooks
+    SymPy's ``ask`` (no whole ``Or``; :data:`satsimp.engine.hooks.ask_whole`)."""
+    import satsimp.methods.refine.identities.compat.upstream as upstream
+    from satsimp.engine import hooks
 
     with mock.patch.object(upstream, "ask", fake_ask), mock.patch.object(hooks, "ask_whole", lambda condition, assumptions: None):
         yield
@@ -314,7 +314,7 @@ def query_scope_recorder():
     """
     from collections import Counter
 
-    from satsimp.identities.compat import backend
+    from satsimp.engine import backend
 
     def generator(request):
         from satassume.sympy_api import out_of_scope
