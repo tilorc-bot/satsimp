@@ -1,10 +1,11 @@
-# Testing satrefine
+# Testing refine
 
-How satrefine's refine (`satrefine/identities/`, the default package
-`handlers_identities`) is verified, what the checks found, and the numbers
+How satsimp's refine (`satsimp/methods/refine/identities/`, the default package
+`handlers_identities`, on the engine `satsimp/engine/`; satsimp was satrefine
+before the rename, see [architecture.md](architecture.md)) is verified, what the checks found, and the numbers
 they give now. How the engine works and why is in [refine.md](refine.md); the
 backends and the tool command lines are in the
-[README](../README.md#satrefine-the-refine-layer-as-a-yardstick); satassume's
+[README](../README.md#refine-the-refine-layer-as-a-yardstick); satassume's
 own gates (the corpus replay, `tools/gate2.py`) are in [testing.md](testing.md).
 
 Every check runs with `PYTHONHASHSEED=0`: a hash-seed dependence once moved a
@@ -15,8 +16,8 @@ but baselines are only comparable under the same seed.
 
 | Tree | What | Package |
 |---|---|---|
-| `tests/refine/` | the refine layer's original handler tests, the verifier tests (`test_refine_verifier_*.py`) and SymPy's own `test_refine.py` (`test_sympy_refine_suite.py` rebinds its `refine`) | the default; `SATREFINE_HANDLERS` selects another |
-| `tests/refine_identities/` | the package's own tests, laid out like it: `core/`, `rules/`, `compat/`, `build/`, `tools/`; plus `regressions.py`, the battery, the termination tests, `test_import_direction.py` and `needs/` | `handlers_identities` (its conftest sets it) |
+| `tests/refine/` | the refine layer's original handler tests, the verifier tests (`test_refine_verifier_*.py`) and SymPy's own `test_refine.py` (`test_sympy_refine_suite.py` rebinds its `refine`) | the default; `SATSIMP_HANDLERS` selects another |
+| `tests/refine_identities/` | the package's own tests, laid out like it: `core/` (the engine, `satsimp/engine/`), `rules/`, `compat/` (refine's `compat/` and the `ask` backend), `build/`, `tools/`; plus `regressions.py`, the battery, the termination tests, `test_import_direction.py` and `needs/` | `handlers_identities` (its conftest sets it) |
 | `tests/refine_v3/` | the v3 reference's suite, frozen with the reference | `handlers_v3` (its conftest sets it) |
 
 - **`regressions.py`**: one row per `refine` input that once went wrong,
@@ -25,20 +26,20 @@ but baselines are only comparable under the same seed.
   row (160 at `075d1f8`) in both identity modes and under the row's backends.
 - **The battery** (`battery_v3.py`): 1,736 cases (1,086 that v3 rewrites, 650
   it leaves unchanged), recorded from the outermost `refine` calls of
-  `tests/refine_v3` (`satrefine/tools/refine_battery_capture.py`, then
+  `tests/refine_v3` (`satsimp/tools/refine_battery_capture.py`, then
   `refine_battery_generate.py`). `test_battery.py` proves it faithful to v3
-  (only with `SATREFINE_HANDLERS=handlers_v3`, so the default run skips those
+  (only with `SATSIMP_HANDLERS=handlers_v3`, so the default run skips those
   1,736 tests) and checks every firing case numerically; known oracle limits
   are strict xfails (`_known_oracle_limit`).
 - **Termination** (`test_engine_termination.py`): the engine against
   adversarial `ask` oracles (always None, always True, random, `P` and `~P` both
   True) on battery and differential cases; each call must return within 20 s.
-  `SATREFINE_TERMINATION_FUZZ=N` runs the large version (N=150 about 10
+  `SATSIMP_TERMINATION_FUZZ=N` runs the large version (N=150 about 10
   minutes; N=1500: 45,304 calls, 0 failures, 25 minutes at `9b73ddb`).
 - **Marker `full`**: the fixpoints of `power_exp_log`, `complex_parts` and
   `integer_funcs` and one slow battery case run only with
-  `SATREFINE_FULL_TESTS=1`; the default run keeps `inverse` as a smoke test.
-  `SATREFINE_STRICT_LOOPS=1` (set by the conftest, the scoreboard and the
+  `SATSIMP_FULL_TESTS=1`; the default run keeps `inverse` as a smoke test.
+  `SATSIMP_STRICT_LOOPS=1` (set by the conftest, the scoreboard and the
   differential) turns a tripped termination guard into a failure.
 - **`default_xfail(needs_file, reason)`** in `tests/refine`: a strict xfail
   for an expectation the default package does not meet, naming the `needs/` test.
@@ -74,7 +75,7 @@ PYTHONHASHSEED=0 python -m pytest -q -n auto tests/refine_v3
 ```
 
 - **One process per tree.** Each refine conftest selects its handler package
-  with `setdefault` before `satrefine` is imported, so in one session the first
+  with `setdefault` before refine (`satsimp.methods.refine`) is imported, so in one session the first
   choice wins and the other suite runs against the wrong package (106 of 297
   regression tests failed that way). The trees also share module basenames.
   `--import-mode=importlib` is no way out: tests import sibling helpers
@@ -96,7 +97,7 @@ reproducible; `.github/workflows/satassume-bump.yml` keeps the pin current.
 Nightly (or on `workflow_dispatch`), when satassume `main` has moved past the
 pin, it runs the three trees as `test.yml` does with the pin moved to `main`,
 on Python 3.11 and 3.12, and compares refine's outputs at the old pin and at
-`main` with `python -m satrefine.tools.refine_compare` (the battery,
+`main` with `python -m satsimp.tools.refine_compare` (the battery,
 classified as `scoreboard battery` does, and the differential's seed-2
 inputs; each dump about 1.5 minutes). If everything passes it opens or
 updates the one bump PR (branch `satassume-bump`) with the commit range, the
@@ -107,36 +108,36 @@ pin is `main` (moved by hand), a bump PR or issue still open is closed. Only
 same-repository PRs count: a fork's PR from a branch of the same name is
 ignored. The branch `satassume-bump` belongs to the workflow, which
 force-pushes it with only the pin change: do not push to it, make a fix the
-bump needs in a separate PR. `satrefine/tools/satassume_bump.py` (standard
+bump needs in a separate PR. `satsimp/tools/satassume_bump.py` (standard
 library only) reads and rewrites the pin, either `satassume @ git+URL@COMMIT`
 or `satassume==VERSION`, and writes the reports; the workflow bumps only a
 commit pin (it resolves `main`, not the latest release). The same by hand:
 
 ```bash
-python satrefine/tools/satassume_bump.py pin
-PYTHONHASHSEED=0 python -m satrefine.tools.refine_compare dump old.json   # at the pin
-python satrefine/tools/satassume_bump.py set COMMIT && pip install -e ".[dev]"
-PYTHONHASHSEED=0 python -m satrefine.tools.refine_compare dump new.json
-python -m satrefine.tools.refine_compare diff old.json new.json
+python satsimp/tools/satassume_bump.py pin
+PYTHONHASHSEED=0 python -m satsimp.tools.refine_compare dump old.json   # at the pin
+python satsimp/tools/satassume_bump.py set COMMIT && pip install -e ".[dev]"
+PYTHONHASHSEED=0 python -m satsimp.tools.refine_compare dump new.json
+python -m satsimp.tools.refine_compare diff old.json new.json
 ```
 
 ## The gates
 
-`satrefine/tools/refine_gates.sh OUTDIR [BASEDIR]` runs every check below in
+`satsimp/tools/refine_gates.sh OUTDIR [BASEDIR]` runs every check below in
 parallel (`JOBS`, default 6; at most `SLOTS`, default 8, gate jobs
 machine-wide) and writes one log per task and `OUTDIR/summary.txt`. With
 `BASEDIR`, an earlier `OUTDIR`, it prints the summary lines that changed, per
 section ("no baseline" for a section added since). Re-running into an existing
 `OUTDIR` re-runs only the tasks that did not finish, so a run cut short can be
 completed. Start it detached and poll in short chunks (see
-[agents.md](agents.md)): `nohup satrefine/tools/refine_gates.sh OUT BASE > OUT.log 2>&1 &`.
+[agents.md](agents.md)): `nohup satsimp/tools/refine_gates.sh OUT BASE > OUT.log 2>&1 &`.
 
 | Section | What | Wall time at `ce0a261` |
 |---|---|---|
 | suite | `pytest -n 3 tests/refine_identities` (with `needs/`) | 51 s |
-| scoreboard generated, live | `scoreboard battery` in each `SATREFINE_IDENTITIES` mode | about 80 s each |
+| scoreboard generated, live | `scoreboard battery` in each `SATSIMP_IDENTITIES` mode | about 80 s each |
 | differential, seeds 2, 3, 7, both modes | `refine_differential --seed S --cases 1500`, combined backend | 48 to 83 s each |
-| differential satassume | seed 2 with `SATREFINE_BACKEND=satassume`, both modes | 49 to 67 s |
+| differential satassume | seed 2 with `SATSIMP_BACKEND=satassume`, both modes | 49 to 67 s |
 | differential ext, matrices | `--ext --timeout 20` (1,000 cases), `--matrices` (1,500), seed 2, both modes | 200 to 215 s, 110 to 130 s |
 | tests/refine, full, termination | `pytest -n 2 tests/refine`; the `full` tests; `test_engine_termination.py` | 42 s, 50 s, 7 s |
 
@@ -159,7 +160,7 @@ modes, satassume and combined backends) and byte-identical regenerated tables.
 
 ### Scoreboard
 
-`python -m satrefine.tools.scoreboard battery` (old name
+`python -m satsimp.tools.scoreboard battery` (old name
 `refine_identity_scoreboard`) prints rows and code lines per family
 (`lib/sizes.py`), then classifies every battery case (`lib/battery.py`): same
 as v3, other form (`simplify` of the difference is 0), miss, quiet (unchanged as
@@ -174,7 +175,7 @@ combination-only wins and refine gaps.
 
 ### Differential against v3
 
-`python -m satrefine.tools.refine_differential --seed S --cases N` runs two
+`python -m satsimp.tools.refine_differential --seed S --cases N` runs two
 packages (default v3 against identities), each in its own subprocess, on the
 same random inputs. Per package it reports fired, unchanged, inconsistent,
 crash, timeout, checked, unchecked and unsound; then which side alone fires,
@@ -214,7 +215,7 @@ prints per-head fire counts (for matrices, per-row coverage).
   with `Q.zero(Z) | Q.zero(W)` (no battery case, test or fuzz input moved),
   and its one droppable row was untested, not redundant, so it got a test.
 - **Generated tables**: `refine_specialize` generates each rule and installs
-  it only after `satrefine/build/verify.py` checks it at a sample point of its
+  it only after `satsimp/build/verify.py` checks it at a sample point of its
   hypothesis and at every edge point that satisfies it (`0, 1, -1, I, -I`, plus
   `build/specs.EDGE_POINTS`: `+-2` for integer_funcs, `+-oo` for inverse). This
   check found SymPy's `Q.zero(b**2)` True for imaginary `b`.
@@ -284,7 +285,7 @@ in `tests/refine_identities/regressions.py` unless a file is named.
 
 | Class | What went wrong | Fix | Regression |
 |---|---|---|---|
-| B9, termination | an empty stated interval (`Q.negative(k) & Q.gt(k, pi/2)`) proved every sign; two `log` rows alternated, each one level deeper, until `RecursionError` | an empty interval proves nothing; nesting, re-entry and work limits (`core/guard.py`) | `test_engine_termination.py`; "default: inconsistent assumptions" |
+| B9, termination | an empty stated interval (`Q.negative(k) & Q.gt(k, pi/2)`) proved every sign; two `log` rows alternated, each one level deeper, until `RecursionError` | an empty interval proves nothing; nesting, re-entry and work limits (`engine/guard.py`) | `test_engine_termination.py`; "default: inconsistent assumptions" |
 | B1-B7, bounds read as finite | `Q.gt(x, 1)` proved `Q.real(x)` and the finite signs, though `x = oo` satisfies it: `Piecewise` with `x < oo`, `Eq(x, 2*x)`, `KroneckerDelta`, `sign(exp(-x))`, `log(x**n)`, `acsch(csch(x))`, `RisingFactorial` | a bound proves `extended_real` and the extended signs; the finite ones need infinity excluded on that side | "#10 B1" to "#10 B7", "#10 B1-B7"; `core/test_engine_bounds_infinity.py` |
 | extended reals | the B1-B7 fix lost 14 rewrites that hold at `+-oo` | rows stated over the extended reals where the identity holds there | "B1-B7 extended" |
 | B8 | `acot`/`acoth` of a rewritten `-z` changed value at `z = 0` (SymPy's evaluation) | rebuilt unevaluated unless the argument is nonzero | "#10 B8" |
@@ -296,8 +297,8 @@ in `tests/refine_identities/regressions.py` unless a file is named.
 | firing cap | the 500-firing cap counted all firings of a call, so a 501-term sum raised; `atan2` of a power exhausted it | cap per rewrite chain | "checker: firing cap", "checker: atan2 firing cap" |
 | infinities | `Eq(x, y)` undecided for two equal infinities; `Max(n**k, log(x))` raised when a child refined to `nan` | a same-infinity proof; the head refuses | "checker: Eq of equal infinities", "engine: head refuses a refined child" |
 | hash seed | `log(1/x)` under `Q.zero(x)` depended on `PYTHONHASHSEED` (a split explored an inconsistent sign case) | no sign case when neither is consistent | `core/test_engine_hash_seed.py`, "engine: zero base" |
-| SymPy `Q.nonzero` | `Abs(x)`, `x**2`, `x*y` of imaginary factors called zero, reaching refine through the combined backend (`c**2*X*Y**2 -> 0`) | guard in `compat/backend.py` | `compat/test_backend_nonzero_guard.py` |
-| SymPy `Q.extended_real` | `sqrt(z)` extended real for negative `z` (`sqrt(z)*conjugate(sqrt(z)) -> z`) | guard in `compat/backend.py` | none dedicated |
+| SymPy `Q.nonzero` | `Abs(x)`, `x**2`, `x*y` of imaginary factors called zero, reaching refine through the combined backend (`c**2*X*Y**2 -> 0`) | guard in `engine/backend.py` | `compat/test_backend_nonzero_guard.py` |
+| SymPy `Q.extended_real` | `sqrt(z)` extended real for negative `z` (`sqrt(z)*conjugate(sqrt(z)) -> z`) | guard in `engine/backend.py` | none dedicated |
 | satassume shared facts | one `ask` wrote a derived fact into the fact base every plain symbol shares | fixed on `main`: the engine never touches SymPy's `_assumptions` | `compat/test_earlier_calls_do_not_leak.py` |
 
 ## Numbers at `075d1f8`
@@ -375,7 +376,7 @@ on this machine (#62 asks to commit them or a script that regenerates them):
 
 - `stream.pkl` (sha256 `94db857d9d5d...`): the `ask` query stream of the
   battery, 16,232 `(proposition, assumptions, answer)` triples, written by
-  `python -m satrefine.tools.refine_record` and replayed against any satassume
+  `python -m satsimp.tools.refine_record` and replayed against any satassume
   checkout by `refine_replay`, which fails if an answer differs;
 - `gate2-frozen.jsonl` (sha256 `d53ed3db2f3a...`): the frozen answers for
   `tools/gate2.py --frozen` (see [testing.md](testing.md)).
