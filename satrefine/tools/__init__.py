@@ -1,4 +1,4 @@
-"""Offline: satrefine's tools (scoreboard, differential, fuzz, oracle, ablation, generation, gates).
+"""Offline: satrefine's tools (scoreboard, differential, fuzz, oracle, ablation, generation, gates, satassume bump).
 
 Run as ``python -m satrefine.tools.<name>``; refine never imports this package.
 What the tools share is in :mod:`satrefine.tools.lib`.

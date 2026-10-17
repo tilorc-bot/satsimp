@@ -89,6 +89,37 @@ xfailed; `tests/refine` 449 passed, 6 xfailed; `tests/refine_v3` 1,004 passed,
 1 xfailed (v3's `arg(exp(I*t))` rule does not fire under the combined and
 satassume backends; not traced, v3 is frozen).
 
+### The satassume pin
+
+satassume stays pinned to a commit in `pyproject.toml`, so outputs are
+reproducible; `.github/workflows/satassume-bump.yml` keeps the pin current.
+Nightly (or on `workflow_dispatch`), when satassume `main` has moved past the
+pin, it runs the three trees as `test.yml` does with the pin moved to `main`,
+on Python 3.11 and 3.12, and compares refine's outputs at the old pin and at
+`main` with `python -m satrefine.tools.refine_compare` (the battery,
+classified as `scoreboard battery` does, and the differential's seed-2
+inputs; each dump about 1.5 minutes). If everything passes it opens or
+updates the one bump PR (branch `satassume-bump`) with the commit range, the
+test results and the comparison; if not, the one tracking issue (label
+`satassume-bump`), which the next passing run closes. A run whose commits
+the open PR or issue already covers is skipped (`force` re-runs it); once the
+pin is `main` (moved by hand), a bump PR or issue still open is closed. Only
+same-repository PRs count: a fork's PR from a branch of the same name is
+ignored. The branch `satassume-bump` belongs to the workflow, which
+force-pushes it with only the pin change: do not push to it, make a fix the
+bump needs in a separate PR. `satrefine/tools/satassume_bump.py` (standard
+library only) reads and rewrites the pin, either `satassume @ git+URL@COMMIT`
+or `satassume==VERSION`, and writes the reports; the workflow bumps only a
+commit pin (it resolves `main`, not the latest release). The same by hand:
+
+```bash
+python satrefine/tools/satassume_bump.py pin
+PYTHONHASHSEED=0 python -m satrefine.tools.refine_compare dump old.json   # at the pin
+python satrefine/tools/satassume_bump.py set COMMIT && pip install -e ".[dev]"
+PYTHONHASHSEED=0 python -m satrefine.tools.refine_compare dump new.json
+python -m satrefine.tools.refine_compare diff old.json new.json
+```
+
 ## The gates
 
 `satrefine/tools/refine_gates.sh OUTDIR [BASEDIR]` runs every check below in
