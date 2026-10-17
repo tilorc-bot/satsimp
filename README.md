@@ -44,12 +44,10 @@ PYTHONHASHSEED=0 python -m pytest -q -n auto tests/refine_v3
 The test trees share module basenames, so run each of `tests/refine_identities`,
 `tests/refine` and `tests/refine_v3` in its own process, as CI does.
 
-To depend on a commit (the distribution is named `satsimp`; the repository is
-still `tilorc-bot/satrefine` until it is renamed, and GitHub redirects the old
-URL after that):
+To depend on a commit (the old `tilorc-bot/satrefine` URL redirects here):
 
 ```sh
-pip install "satsimp @ https://github.com/tilorc-bot/satrefine/archive/<commit>.zip"
+pip install "satsimp @ https://github.com/tilorc-bot/satsimp/archive/<commit>.zip"
 ```
 
 ## Renamed from satrefine
