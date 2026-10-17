@@ -5,7 +5,7 @@ true only for real matrices: ``Matrix([[5/4, 3*I/4], [-3*I/4, 5/4]])`` is
 orthogonal (``A.T*A == I``) and not unitary.  Matrix queries go to SymPy, so
 ``refine(Adjoint(X)*X, Q.orthogonal(X))`` gave ``I``.  While the combined
 backend asks SymPy, the fact base has ``Q.orthogonal & Q.real_elements ->
-Q.unitary`` instead (``satrefine/identities/compat/backend.py``).
+Q.unitary`` instead (``satsimp/identities/compat/backend.py``).
 """
 from __future__ import annotations
 
@@ -13,9 +13,9 @@ import pytest
 from sympy import Adjoint, I, Identity, Matrix, MatrixSymbol, Q, Rational, eye
 from sympy.assumptions.ask import ask as sympy_ask
 
-from satrefine import refine
-from satrefine.identities.compat import backend
-from satrefine.identities.compat.backend import ask
+from satsimp import refine
+from satsimp.identities.compat import backend
+from satsimp.identities.compat.backend import ask
 
 X = MatrixSymbol('X', 2, 2)
 

@@ -18,8 +18,8 @@ from sympy.core.numbers import I
 from sympy.core.symbol import Symbol
 from sympy.functions.elementary.complexes import Abs, im, sign
 
-from satrefine import refine
-from satrefine.testing.harness import (
+from satsimp import refine
+from satsimp.testing.harness import (
     assert_refinement_valid,
     assert_refines_like_sympy,
 )

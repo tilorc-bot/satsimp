@@ -1,14 +1,14 @@
-"""SymPy's own ``test_refine.py`` run against :mod:`satrefine`.
+"""SymPy's own ``test_refine.py`` run against :mod:`satsimp`.
 
 The suite is imported from the SymPy on ``sys.path``; ``refine`` and
-``refine_sin_cos`` are rebound to satrefine's in the imported module, and
+``refine_sin_cos`` are rebound to satsimp's in the imported module, and
 the test functions are re-exported so pytest collects them.  Which engine
-answers the handlers' questions is chosen by :mod:`satrefine.identities.compat.backend`.
+answers the handlers' questions is chosen by :mod:`satsimp.identities.compat.backend`.
 """
 import pytest
 
-from satrefine import refine as _refine
-from satrefine import refine_sin_cos as _refine_sin_cos
+from satsimp import refine as _refine
+from satsimp import refine_sin_cos as _refine_sin_cos
 from sympy.assumptions.tests import test_refine as _suite
 
 _suite.refine = _refine

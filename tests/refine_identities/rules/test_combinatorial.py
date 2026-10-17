@@ -10,8 +10,8 @@ from __future__ import annotations
 import pytest
 from sympy import I, Q, Rational, S, binomial, factorial, ff, gamma, rf, oo, symbols, zoo
 
-from satrefine import refine
-from satrefine.testing.harness import assert_refinement_valid
+from satsimp import refine
+from satsimp.testing.harness import assert_refinement_valid
 
 n, k, x = symbols('n k x')
 HALF = Rational(1, 2)
@@ -136,5 +136,5 @@ def test_refusal(expr, assumptions):
 
 
 def test_table_size():
-    from satrefine.identities.rules import combinatorial as mod
+    from satsimp.identities.rules import combinatorial as mod
     assert len(mod.RULES) == 17

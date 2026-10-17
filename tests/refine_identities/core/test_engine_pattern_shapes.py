@@ -8,8 +8,8 @@ failures)."""
 from sympy import Symbol, conjugate, exp, log, symbols
 from sympy.core.cache import clear_cache
 
-from satrefine.identities.core import match as _engine
-from satrefine.identities.core.match import bindings
+from satsimp.identities.core import match as _engine
+from satsimp.identities.core.match import bindings
 
 
 def _fresh(name):
@@ -39,7 +39,7 @@ def test_a_rest_symbol_inside_a_longer_product():
 
 def test_an_exponent_symbol_also_binds_one():
     """``b**exponent('k')`` matches a power (``k`` its exponent) or any other target as its first power."""
-    from satrefine.identities.core.match import exponent
+    from satsimp.identities.core.match import exponent
     w, x, y = symbols("w x y")
     k, m = exponent("k"), exponent("m")
     pattern = w**k*conjugate(w)**m

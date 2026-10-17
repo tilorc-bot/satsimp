@@ -11,9 +11,9 @@ from __future__ import annotations
 
 from sympy import Add, HadamardProduct, MatMul, MatrixSymbol, symbols
 
-from satrefine.identities.compat import matrices
-from satrefine.identities.compat.matrices import HADAMARD, MATMUL, R
-from satrefine.identities.core.match import bindings
+from satsimp.identities.compat import matrices
+from satsimp.identities.compat.matrices import HADAMARD, MATMUL, R
+from satsimp.identities.core.match import bindings
 
 X = MatrixSymbol("X", 2, 2)
 

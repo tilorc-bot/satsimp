@@ -1,4 +1,4 @@
-"""``satrefine.tools.lib`` and the scoreboard's command line (the tools' own tests are
+"""``satsimp.tools.lib`` and the scoreboard's command line (the tools' own tests are
 test_fuzz_ext, test_matrix_fuzz and test_ablate; the gates run the tools end to end)."""
 from __future__ import annotations
 
@@ -7,9 +7,9 @@ import signal
 
 from sympy import Abs, Q, S, log, sqrt, symbols, srepr
 
-from satrefine.tools import scoreboard
-from satrefine.tools.lib import battery, numeric, points, workers
-from satrefine.tools.lib.report import table
+from satsimp.tools import scoreboard
+from satsimp.tools.lib import battery, numeric, points, workers
+from satsimp.tools.lib.report import table
 
 x, y = symbols("x y")
 

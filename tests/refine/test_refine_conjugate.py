@@ -19,8 +19,8 @@ from sympy.abc import n, x, y, z
 from sympy.core.numbers import I
 from sympy.functions.elementary.complexes import Abs, conjugate
 
-from satrefine import refine
-from satrefine.testing.harness import (
+from satsimp import refine
+from satsimp.testing.harness import (
     assert_refinement_valid,
 )
 

@@ -1,7 +1,7 @@
 """The ``handlers_v3`` acceptance battery (``battery_v3.py``).
 
 ``test_battery_matches_v3`` proves the battery faithful: every case run
-through ``satrefine.refine`` with ``SATREFINE_HANDLERS=handlers_v3`` gives
+through ``satsimp.refine`` with ``SATREFINE_HANDLERS=handlers_v3`` gives
 exactly the recorded value (or leaves the input unchanged where the value
 is ``None``).  It needs ``handlers_v3`` to be the loaded package and skips
 otherwise (the conftest of this directory loads ``handlers_identities``
@@ -25,18 +25,18 @@ import sys
 
 import pytest
 
-if "satrefine" not in sys.modules:
+if "satsimp" not in sys.modules:
     os.environ["SATREFINE_HANDLERS"] = "handlers_v3"
 
 from battery_v3 import BATTERY
 from sympy import DiracDelta, MatrixSymbol, Rem, zoo
 
-from satrefine import refine
-from satrefine.testing.harness import assert_refinement_valid
+from satsimp import refine
+from satsimp.testing.harness import assert_refinement_valid
 
 _OTHER_PACKAGES = ("handlers", "handlers_v2", "handlers_identities")
-V3_LOADED = "satrefine.handlers_v3" in sys.modules and not any(
-    "satrefine." + name in sys.modules for name in _OTHER_PACKAGES)
+V3_LOADED = "satsimp.handlers_v3" in sys.modules and not any(
+    "satsimp." + name in sys.modules for name in _OTHER_PACKAGES)
 
 def _known_oracle_limit(expr, assumptions, expected, source):
     """Why the numeric oracle's mismatch on this case is not a wrong refinement, or None."""

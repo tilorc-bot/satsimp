@@ -33,10 +33,10 @@ from pathlib import Path
 import pytest
 from sympy import Function, Q, Symbol, factorial, log, pi
 
-from satrefine import refine
-from satrefine.identities.compat import upstream as _upstream
-from satrefine.identities.core import driver as _dispatch
-from satrefine.identities.core.driver import RefineLoopError
+from satsimp import refine
+from satsimp.identities.compat import upstream as _upstream
+from satsimp.identities.core import driver as _dispatch
+from satsimp.identities.core.driver import RefineLoopError
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -152,7 +152,7 @@ def _battery_sample():
 
 def _random_cases(n):
     """``n`` differential cases, taken in turn from seeds 2, 3 and 7."""
-    from satrefine.tools.refine_differential import generate
+    from satsimp.tools.refine_differential import generate
     out, case = [], 0
     while len(out) < n:
         for seed in (2, 3, 7):
@@ -208,7 +208,7 @@ def test_b9_contradictory_signs_with_an_undecided_ask(mode):
 
 
 def test_b9_with_the_satassume_backend():
-    code = ("from sympy import *\nfrom satrefine import refine\nfrom satrefine.identities.core import driver as _dispatch\n"
+    code = ("from sympy import *\nfrom satsimp import refine\nfrom satsimp.identities.core import driver as _dispatch\n"
             "k = Symbol('k')\nfor mode in (_dispatch.tables, _dispatch.live):\n"
             "    with mode():\n        print(refine(factorial(log(k)), Q.negative(k) & Q.gt(k, pi/2)))\n")
     env = dict(os.environ, SATREFINE_BACKEND="satassume", SATREFINE_HANDLERS="handlers_identities",

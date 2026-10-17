@@ -1,7 +1,7 @@
-"""Tests for ``satrefine.reference.v3.complex_parts``.
+"""Tests for ``satsimp.reference.v3.complex_parts``.
 
 Every positive test asserts the exact refined form and then checks it
-numerically with :func:`satrefine.harness.assert_refinement_valid`, whose
+numerically with :func:`satsimp.harness.assert_refinement_valid`, whose
 default sample set contains ``0``, negative reals, points on the imaginary
 axis and genuinely complex points (``1 + I``, ``1 - I``), so a rule that is
 stated for a real factor is exercised with the other symbols complex.
@@ -17,9 +17,9 @@ from sympy import (Abs, I, Mul, Rational, S, Symbol, arg, conjugate, cos, cosh,
                    exp, im, pi, re, sign, sin, sqrt, symbols)
 from sympy.assumptions import Q
 
-from satrefine import refine
-from satrefine.reference.v3 import complex_parts
-from satrefine.testing.harness import assert_refinement_valid
+from satsimp import refine
+from satsimp.reference.v3 import complex_parts
+from satsimp.testing.harness import assert_refinement_valid
 
 x, y, z, t, w = symbols('x y z t w')
 n = Symbol('n')
@@ -58,7 +58,7 @@ def bounded(seconds):
 # --------------------------------------------------------------------------
 
 def test_registered_handlers():
-    from satrefine.identities.compat.upstream import handlers_dict
+    from satsimp.identities.compat.upstream import handlers_dict
     for key in ('re', 'im', 'arg', 'sign', 'Abs', 'conjugate', 'Mul'):
         assert handlers_dict[key].__module__ == complex_parts.__name__
 

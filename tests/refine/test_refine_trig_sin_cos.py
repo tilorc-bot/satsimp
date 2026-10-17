@@ -1,7 +1,7 @@
 """Tests for the guarded ``sin``/``cos`` refine handler.
 
 The handler is a copy of the vendored
-:func:`satrefine.identities.compat.upstream.refine_sin_cos` with the PR #29450 guard
+:func:`satsimp.identities.compat.upstream.refine_sin_cos` with the PR #29450 guard
 for the ``(-1)**(k/2)`` factor that can evaluate to an ``Integer``.
 """
 from __future__ import annotations
@@ -13,8 +13,8 @@ from sympy.core import S
 from sympy.core.symbol import Symbol
 from sympy.functions.elementary.trigonometric import cos, sin
 
-from satrefine import refine
-from satrefine.testing.harness import (
+from satsimp import refine
+from satsimp.testing.harness import (
     assert_refines_like_sympy,
     assert_refinement_valid,
     stub_ask,

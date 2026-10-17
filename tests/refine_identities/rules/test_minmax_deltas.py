@@ -12,8 +12,8 @@ from sympy import (Abs, DiracDelta, Eq, Heaviside, KroneckerDelta, Max, Min, Q, 
                    nan, oo, symbols)
 from sympy.assumptions.assume import AppliedPredicate
 
-from satrefine import refine
-from satrefine.testing.harness import assert_refinement_valid
+from satsimp import refine
+from satsimp.testing.harness import assert_refinement_valid
 
 x, y, z, k, i, j, z_, w_ = symbols('x y z k i j z_ w_')
 REALS = [S(v) for v in range(-3, 4)] + [Rational(1, 2), Rational(-7, 2)]
@@ -138,7 +138,7 @@ def test_table_size():
     """Five Piecewise definitions (Max, Min, KroneckerDelta with and without a
     range, Heaviside), three DiracDelta rule rows and four rows for an infinite
     argument of Max/Min."""
-    from satrefine.identities.rules import minmax_deltas as mod
+    from satsimp.identities.rules import minmax_deltas as mod
     assert (len(mod.FACTS), len(mod.RULES)) == (5, 7)
 
 
@@ -171,7 +171,7 @@ def test_both_relations_refuted_stays(expr):
     # argument (a relation says its sides are extended reals).  Max/Min have no
     # default branch, so the definition does not fire: no nan.
     from unittest import mock
-    from satrefine.identities.core import prove
+    from satsimp.identities.core import prove
     decide = prove.decide
 
     def refuting(cond, assumptions):

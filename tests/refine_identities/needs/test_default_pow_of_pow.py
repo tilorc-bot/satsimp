@@ -32,7 +32,7 @@ import pytest
 from sympy import Abs, Q
 from sympy.abc import x, y, z
 
-from satrefine import refine
+from satsimp import refine
 
 
 def test_power_of_even_power_of_real():

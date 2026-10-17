@@ -12,8 +12,8 @@ from sympy.core import S
 from sympy.core.numbers import Rational
 from sympy.functions.combinatorial.factorials import binomial
 
-from satrefine import refine
-from satrefine.testing.harness import (
+from satsimp import refine
+from satsimp.testing.harness import (
     assert_refinement_valid,
     recording_ask,
     stub_ask,

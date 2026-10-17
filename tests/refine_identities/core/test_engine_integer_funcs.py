@@ -2,7 +2,7 @@
 
 Each test is the smallest input the current ``rule_handler``
 gets wrong or cannot express; the table in
-``satrefine/handlers_identities/integer_funcs.py`` is written in these
+``satsimp/handlers_identities/integer_funcs.py`` is written in these
 forms.  Requested from the engine agent; remove a test's ``needs`` status
 by making it pass.
 """
@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from sympy import Mod, Q, S, floor, gamma, symbols
 
-from satrefine.identities.core.rewrite import rule_handler
+from satsimp.identities.core.rewrite import rule_handler
 
 a, b, c, m, n, x, y = symbols('a b c m n x y')
 
@@ -54,7 +54,7 @@ def test_ask_raising_is_not_provable(monkeypatch):
     (``Q.lt(m, y)`` is True), so the raise is simulated."""
     from sympy.assumptions import AppliedPredicate
 
-    from satrefine.identities.compat import upstream as _upstream
+    from satsimp.identities.compat import upstream as _upstream
     real_ask = _upstream.ask
 
     def raising(prop, assumptions=True):

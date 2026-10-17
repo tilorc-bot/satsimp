@@ -1,10 +1,10 @@
 """The layout rules of issue #13, checked.
 
-* **Imports go one way**: ``satrefine.build``, ``satrefine.tools`` and
-  ``satrefine.testing`` (offline) may import ``satrefine.identities``, never
-  the reverse; nor does ``satrefine.identities`` import the reference
-  implementation ``satrefine.reference`` (v3, measuring material).  A subprocess makes the offline packages unimportable (a
-  meta-path finder that raises) before it imports ``satrefine``, then refines
+* **Imports go one way**: ``satsimp.build``, ``satsimp.tools`` and
+  ``satsimp.testing`` (offline) may import ``satsimp.identities``, never
+  the reverse; nor does ``satsimp.identities`` import the reference
+  implementation ``satsimp.reference`` (v3, measuring material).  A subprocess makes the offline packages unimportable (a
+  meta-path finder that raises) before it imports ``satsimp``, then refines
   a few inputs in each ``SATREFINE_IDENTITIES`` mode; the results must be what
   this process gets.
 * **``identities/core`` names no specific SymPy function and no matrix type**
@@ -24,12 +24,12 @@ from pathlib import Path
 
 import pytest
 
-from satrefine.identities.core import driver as _dispatch
+from satsimp.identities.core import driver as _dispatch
 
 ROOT = Path(__file__).resolve().parents[2]
-CORE = ROOT / "satrefine" / "identities" / "core"
+CORE = ROOT / "satsimp" / "identities" / "core"
 
-OFFLINE = ("satrefine.build", "satrefine.tools", "satrefine.testing")
+OFFLINE = ("satsimp.build", "satsimp.tools", "satsimp.testing")
 
 CASES = [   # (expression, assumptions), as source evaluated with ``from sympy import *``
     ("log(x)", "Q.negative(x)"),
@@ -59,19 +59,19 @@ class Blocked(importlib.abc.MetaPathFinder):
 
 sys.meta_path.insert(0, Blocked())
 from sympy import *
-import satrefine
+import satsimp
 x, y = symbols("x y")
 X = MatrixSymbol("X", 3, 3)
-out = [srepr(satrefine.refine(eval(e), eval(a))) for e, a in %(cases)r]
+out = [srepr(satsimp.refine(eval(e), eval(a))) for e, a in %(cases)r]
 loaded = sorted(m for m in sys.modules if m.startswith(OFFLINE))
-print(json.dumps({"results": out, "loaded": loaded, "refine": satrefine.refine.__module__}))
+print(json.dumps({"results": out, "loaded": loaded, "refine": satsimp.refine.__module__}))
 '''
 
 
 def _expected() -> list[str]:
     from sympy import srepr, symbols, MatrixSymbol  # noqa: F401
     import sympy
-    from satrefine import refine
+    from satsimp import refine
     names = dict(vars(sympy))
     names.update(x=symbols("x"), y=symbols("y"), X=MatrixSymbol("X", 3, 3))
     return [srepr(refine(eval(e, names), eval(a, names))) for e, a in CASES]
@@ -86,7 +86,7 @@ def test_refine_runs_without_the_offline_packages(mode):
     assert proc.returncode == 0, proc.stderr[-3000:]
     child = json.loads(proc.stdout.strip().splitlines()[-1])
     assert child["loaded"] == []
-    assert child["refine"] == "satrefine.identities.core.driver"
+    assert child["refine"] == "satsimp.identities.core.driver"
     with (_dispatch.live() if mode == "live" else _dispatch.tables()):
         expected = _expected()
     assert child["results"] == expected
@@ -115,21 +115,21 @@ def _imports(directory: Path, forbidden: tuple[str, ...]) -> list[str]:
 
 
 def test_the_offline_packages_are_not_imported_by_identities():
-    """No module under ``satrefine/identities`` imports an offline package, even lazily."""
-    found = _imports(ROOT / "satrefine" / "identities", OFFLINE)
+    """No module under ``satsimp/identities`` imports an offline package, even lazily."""
+    found = _imports(ROOT / "satsimp" / "identities", OFFLINE)
     assert not found, found
 
 
 def test_the_reference_is_not_imported_by_identities():
-    """No module under ``satrefine/identities`` imports ``satrefine.reference`` (v3), even lazily."""
-    found = _imports(ROOT / "satrefine" / "identities", ("satrefine.reference",))
+    """No module under ``satsimp/identities`` imports ``satsimp.reference`` (v3), even lazily."""
+    found = _imports(ROOT / "satsimp" / "identities", ("satsimp.reference",))
     assert not found, found
 
 
 def test_core_imports_no_rules_or_compat():
     """No module under ``identities/core`` imports ``identities.rules`` or ``identities.compat``,
     even lazily: they plug into core through ``core/hooks.py``."""
-    found = _imports(CORE, ("satrefine.identities.rules", "satrefine.identities.compat"))
+    found = _imports(CORE, ("satsimp.identities.rules", "satsimp.identities.compat"))
     assert not found, found
 
 

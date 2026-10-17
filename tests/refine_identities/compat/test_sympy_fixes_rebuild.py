@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from sympy import Abs, Q, acot, acoth, pi, symbols
 
-from satrefine.identities.compat.sympy_fixes import rebuild
+from satsimp.identities.compat.sympy_fixes import rebuild
 
 z = symbols("z")
 

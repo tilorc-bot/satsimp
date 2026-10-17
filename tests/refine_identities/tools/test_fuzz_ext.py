@@ -1,4 +1,4 @@
-"""The fuzzers' extended family (``satrefine.tools.lib``, ``refine_fuzz --ext``): infinite sample
+"""The fuzzers' extended family (``satsimp.tools.lib``, ``refine_fuzz --ext``): infinite sample
 points, relations with infinite bounds, SymPy's conventions at infinity
 classified instead of reported, and the default case streams unchanged.
 
@@ -14,11 +14,11 @@ import pytest
 from sympy import (KroneckerDelta, Piecewise, Q, RisingFactorial, S, acoth, acsch, atan2, coth, csch, exp, gamma, log,
                    oo, pi, sign, symbols, zoo, Eq, I, Add, Pow, im)
 
-from satrefine.tools.lib import assumptions as A
-from satrefine.tools.lib import grammar as G
-from satrefine.tools.lib import matrices as M
-from satrefine.tools.lib import numeric as V
-from satrefine.tools.lib import points as P
+from satsimp.tools.lib import assumptions as A
+from satsimp.tools.lib import grammar as G
+from satsimp.tools.lib import matrices as M
+from satsimp.tools.lib import numeric as V
+from satsimp.tools.lib import points as P
 
 x, y, z, n, m, k = symbols("x y z n m k")
 

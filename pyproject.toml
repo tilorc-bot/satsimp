@@ -3,7 +3,7 @@ requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "satrefine"
+name = "satsimp"
 version = "0.1.0"
 description = "SymPy's refine() as rule tables, on the satassume ask engine"
 readme = "README.md"
@@ -21,10 +21,10 @@ dependencies = [
 dev = ["pytest", "pytest-xdist", "hypothesis", "z3-solver"]
 
 [tool.setuptools.packages.find]
-include = ["satrefine*"]
+include = ["satsimp*"]
 # offline parts (table generation, tools, test fixtures) and the reference handlers
-# (satrefine.reference, selected as handlers_v3) are dev-only
-exclude = ["satrefine.build*", "satrefine.tools*", "satrefine.testing*", "satrefine.reference*"]
+# (satsimp.reference, selected as handlers_v3) are dev-only
+exclude = ["satsimp.build*", "satsimp.tools*", "satsimp.testing*", "satsimp.reference*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

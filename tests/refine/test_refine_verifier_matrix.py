@@ -18,7 +18,7 @@ from typing import Any
 
 import pytest
 
-from satrefine.identities.compat import backend
+from satsimp.identities.compat import backend
 from sympy import Matrix, Q, S, eye, simplify, sqrt
 from sympy.abc import i, j, n, x
 from sympy.assumptions.refine import refine as sympy_refine
@@ -35,8 +35,8 @@ from sympy.matrices.expressions import (
 )
 from sympy.matrices.expressions.determinant import Determinant
 
-from satrefine import refine
-from satrefine.testing.harness import (
+from satsimp import refine
+from satsimp.testing.harness import (
     assert_refines_like_sympy,
     scripted_ask,
     stub_ask,

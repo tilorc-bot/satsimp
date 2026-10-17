@@ -1,6 +1,6 @@
-"""Families as specs (:mod:`satrefine.identities.core.spec`): importing a family
-registers nothing, :func:`satrefine.identities.load` registers every family's
-spec (:func:`satrefine.identities.family_spec`), every row a family's handlers
+"""Families as specs (:mod:`satsimp.identities.core.spec`): importing a family
+registers nothing, :func:`satsimp.identities.load` registers every family's
+spec (:func:`satsimp.identities.family_spec`), every row a family's handlers
 use is one of the rows its spec states (``facts``, ``rules``), derived from
 them (``derive(facts, exp_forms)``), or a stated row over a generic head (an
 undefined function such as ``G``) with the key's head put in, and a family
@@ -16,10 +16,10 @@ import pytest
 from sympy import sympify
 from sympy.core.function import UndefinedFunction
 
-from satrefine.identities.compat.upstream import handlers_dict
-from satrefine.identities import families, family_module_name, family_modules, family_spec
-from satrefine.identities.core.spec import Family, Identities, Rules, build
-from satrefine.identities.rules._tables import derive
+from satsimp.identities.compat.upstream import handlers_dict
+from satsimp.identities import families, family_module_name, family_modules, family_spec
+from satsimp.identities.core.spec import Family, Identities, Rules, build
+from satsimp.identities.rules._tables import derive
 
 
 def test_importing_a_family_registers_nothing():
@@ -27,9 +27,9 @@ def test_importing_a_family_registers_nothing():
     ``handlers_dict`` and the range rows stay as they are."""
     code = textwrap.dedent(f"""
         import importlib, sys
-        import satrefine
-        from satrefine.identities.compat.upstream import handlers_dict
-        from satrefine.identities.rules import _simple
+        import satsimp
+        from satsimp.identities.compat.upstream import handlers_dict
+        from satsimp.identities.rules import _simple
         before = {{k: id(v) for k, v in handlers_dict.items()}}
         ranges = {{k: list(v) for k, v in _simple.RANGES.items()}}
         names = {[family_module_name(f) for f in families()]!r}

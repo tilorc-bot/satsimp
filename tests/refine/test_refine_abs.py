@@ -14,8 +14,8 @@ from sympy.abc import x, y, z
 from sympy.core import S
 from sympy.functions.elementary.complexes import Abs
 
-from satrefine import refine
-from satrefine.testing.harness import (
+from satsimp import refine
+from satsimp.testing.harness import (
     assert_refinement_valid,
     assert_refines_like_sympy,
 )

@@ -22,7 +22,7 @@ SCRIPT = textwrap.dedent("""
     import os
     os.environ["SATREFINE_HANDLERS"] = "handlers_identities"
     from sympy import Q, Symbol, sqrt, log
-    from satrefine import refine
+    from satsimp import refine
     x, n = Symbol('x'), Symbol('n')
     refine(log(x**n), Q.negative(n) & Q.nonnegative(x))
     print(Symbol('fresh').is_negative)

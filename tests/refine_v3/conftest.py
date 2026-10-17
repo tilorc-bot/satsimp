@@ -1,7 +1,7 @@
 """Fixtures for the ``handlers_v3`` tests.
 
 These tests target ``handlers_v3``; the module below selects it before
-``satrefine`` is imported so a plain ``pytest tests/refine_v3`` works.
+``satsimp`` is imported so a plain ``pytest tests/refine_v3`` works.
 Setting ``SATREFINE_HANDLERS`` to another package runs this suite as a
 cross-check of that package; ``SATREFINE_BACKEND`` selects the ask backend
 (default ``combined``) as everywhere else.
@@ -14,10 +14,10 @@ import sys
 import pytest
 
 os.environ.setdefault("SATREFINE_HANDLERS", "handlers_v3")
-if "satrefine" in sys.modules and "satrefine." + os.environ["SATREFINE_HANDLERS"] not in sys.modules:
-    raise RuntimeError("satrefine was imported before conftest selected the handler package")
+if "satsimp" in sys.modules and "satsimp." + os.environ["SATREFINE_HANDLERS"] not in sys.modules:
+    raise RuntimeError("satsimp was imported before conftest selected the handler package")
 
-from satrefine.testing.harness import query_scope_recorder  # noqa: E402
+from satsimp.testing.harness import query_scope_recorder  # noqa: E402
 
 
 @pytest.fixture(autouse=True)

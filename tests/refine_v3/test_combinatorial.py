@@ -1,4 +1,4 @@
-"""Tests for ``satrefine.reference.v3.combinatorial``.
+"""Tests for ``satsimp.reference.v3.combinatorial``.
 
 Each rule has a positive test, a numeric check that the original and the
 refined expression agree at explicit points satisfying the precondition
@@ -13,7 +13,7 @@ import pytest
 from sympy import (I, Q, Rational, S, Symbol, binomial, factorial, ff, gamma,
                    nan, oo, rf, symbols, zoo)
 
-from satrefine import refine
+from satsimp import refine
 
 n, k, x, y = symbols('n k x y')
 HALF = Rational(1, 2)

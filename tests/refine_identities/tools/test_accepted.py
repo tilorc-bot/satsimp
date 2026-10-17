@@ -1,4 +1,4 @@
-"""``satrefine.tools.lib.accepted``: the reviewed differences from v3.
+"""``satsimp.tools.lib.accepted``: the reviewed differences from v3.
 
 The scoreboard checks every "fired where v3 expects unchanged" numerically
 through the harness oracle, except where the sampler cannot draw a point (a
@@ -9,7 +9,7 @@ from __future__ import annotations
 import pytest
 from sympy import Abs, I, Max, N, Rational, S, acos, asin, atan, cos, cot, log, oo, pi, sin, symbols, zoo
 
-from satrefine.tools.lib import accepted, battery
+from satsimp.tools.lib import accepted, battery
 
 x = symbols("x")
 

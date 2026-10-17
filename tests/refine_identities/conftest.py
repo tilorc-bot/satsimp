@@ -4,7 +4,7 @@ The layout follows the package: ``core/``, ``rules/``, ``compat/``, ``build/``
 and ``tools/`` test the modules of the same name; the per-bug regressions are
 rows of ``regressions.py``; ``needs/`` holds open requests.
 
-Selects the package before ``satrefine`` is imported so a plain
+Selects the package before ``satsimp`` is imported so a plain
 ``pytest tests/refine_identities`` works; ``SATREFINE_BACKEND`` selects the
 ask backend as everywhere else.
 """
@@ -18,10 +18,10 @@ import pytest
 
 os.environ.setdefault("SATREFINE_HANDLERS", "handlers_identities")
 os.environ.setdefault("SATREFINE_STRICT_LOOPS", "1")   # a tripped loop guard fails the test
-if "satrefine" in sys.modules and "satrefine." + os.environ["SATREFINE_HANDLERS"] not in sys.modules:
-    raise RuntimeError("satrefine was imported before conftest selected the handler package")
+if "satsimp" in sys.modules and "satsimp." + os.environ["SATREFINE_HANDLERS"] not in sys.modules:
+    raise RuntimeError("satsimp was imported before conftest selected the handler package")
 
-from satrefine.testing.harness import query_scope_recorder  # noqa: E402
+from satsimp.testing.harness import query_scope_recorder  # noqa: E402
 
 
 @pytest.fixture(autouse=True)
@@ -40,7 +40,7 @@ def pytest_configure(config: pytest.Config) -> None:
 
 
 def pytest_ignore_collect(collection_path: Path, config: pytest.Config) -> bool | None:
-    """Collect ``build/`` (the tests of ``satrefine.build``), which pytest's
+    """Collect ``build/`` (the tests of ``satsimp.build``), which pytest's
     default ``norecursedirs`` skips by name."""
     if collection_path == Path(__file__).resolve().parent / "build":
         return False

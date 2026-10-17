@@ -19,7 +19,7 @@ assumptions is enough).  Rows then fired on it:
 The cause is SymPy's ``Q.nonzero`` handlers for ``Abs``, ``Pow`` and ``Mul``,
 which answer ``False`` ("zero or not real") whenever an argument is not a real
 nonzero number, and ``Q.zero(e) = ~Q.nonzero(e) & Q.real(e)``.  The guard is in
-``satrefine/backend.py``.
+``satsimp/backend.py``.
 """
 from __future__ import annotations
 
@@ -27,9 +27,9 @@ import pytest
 from sympy import Abs, I, MatrixSymbol, Q, Symbol, ZeroMatrix, arg, exp, log, sqrt, symbols
 from sympy.assumptions.ask import ask as sympy_ask
 
-from satrefine import refine
-from satrefine.identities.compat import backend
-from satrefine.identities.compat.backend import ask
+from satsimp import refine
+from satsimp.identities.compat import backend
+from satsimp.identities.compat.backend import ask
 
 x, y, z, b, c = Symbol('x'), Symbol('y'), Symbol('z'), Symbol('b'), Symbol('c')
 
