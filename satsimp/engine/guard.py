@@ -53,7 +53,7 @@ At the top level the outcome depends on :func:`strict`:
   partly rewritten result would be only as good as the rows that looped, and
   a library call must not crash on assumptions the caller could not know
   were contradictory;
-* with ``SATREFINE_STRICT_LOOPS=1`` (or inside :func:`strict_loops`) it
+* with ``SATSIMP_STRICT_LOOPS=1`` (or inside :func:`strict_loops`) it
   raises :class:`RefineLoopError`, so a loop is a visible failure.  The test
   suite and the gate tools (scoreboard, differential) run strict: under
   consistent assumptions a trip is an engine bug (two rows undoing each
@@ -92,7 +92,7 @@ _strict: list[bool] = []
 
 def strict() -> bool:
     """Whether a tripped guard raises :class:`RefineLoopError` (rather than
-    returning the input unchanged): :func:`strict_loops` or ``SATREFINE_STRICT_LOOPS=1``."""
+    returning the input unchanged): :func:`strict_loops` or ``SATSIMP_STRICT_LOOPS=1``."""
     if _strict:
         return _strict[-1]
     return config.env_strict()

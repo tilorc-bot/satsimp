@@ -55,6 +55,7 @@ import tempfile
 import time
 from collections import Counter
 
+from satsimp.engine.config import env_setdefault
 from satsimp.tools.lib import matrices as M
 from satsimp.tools.lib.grammar import ext_generate, generate
 from satsimp.tools.lib.numeric import compare, ext_compare, fmt
@@ -75,7 +76,7 @@ def worker(package, seed, cases, out, timeout, matrices=False, ext=False):
     """Refine every case with ``package`` (the one this process loaded), check each rewrite, write JSON."""
     import json
 
-    os.environ.setdefault("SATREFINE_STRICT_LOOPS", "1")   # a tripped loop guard is a crash here
+    env_setdefault("STRICT_LOOPS", "1")   # a tripped loop guard is a crash here
     assert sys.modules.get("satsimp.methods.refine." + package) is not None, \
         f"satsimp.methods.refine.{package} was not loaded"
     backend_from_env()
@@ -115,7 +116,7 @@ def run_worker(package, args, out):
     """The worker's records for ``package``, run in a fresh process that loads it."""
     cmd = ["--worker", package, "--seed", str(args.seed), "--cases", str(args.cases), "--out", out,
            "--timeout", str(args.timeout)] + (["--matrices"] if args.matrices else []) + (["--ext"] if args.ext else [])
-    return run_json_worker("satsimp.tools.refine_differential", cmd, out, env={"SATREFINE_HANDLERS": package},
+    return run_json_worker("satsimp.tools.refine_differential", cmd, out, env={"SATSIMP_HANDLERS": package},
                            failure=f"worker for {package} failed")
 
 

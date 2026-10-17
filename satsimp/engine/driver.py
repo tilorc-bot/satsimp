@@ -62,7 +62,7 @@ _forced: list[str] = []
 
 
 def mode() -> str:
-    """``"generated"`` (default) or ``"live"``, from ``SATREFINE_IDENTITIES`` unless :func:`live` is active."""
+    """``"generated"`` (default) or ``"live"``, from ``SATSIMP_IDENTITIES`` unless :func:`live` is active."""
     if _forced:
         return _forced[-1]
     return config.env_mode()
@@ -75,7 +75,7 @@ def live() -> Any:
 
 
 def tables() -> Any:
-    """Use the generated tables inside the block whatever ``SATREFINE_IDENTITIES`` says."""
+    """Use the generated tables inside the block whatever ``SATSIMP_IDENTITIES`` says."""
     return pushed(_forced, "generated")
 
 

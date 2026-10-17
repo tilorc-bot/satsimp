@@ -6,7 +6,7 @@ The reference the identity handlers are measured against: the battery
 scoreboard and the differential compare with it.  It was
 ``satrefine/handlers_v3`` until phase 3.
 
-Select with ``SATREFINE_HANDLERS=handlers_v3`` (:mod:`satsimp.methods.refine.handlers_v3`
+Select with ``SATSIMP_HANDLERS=handlers_v3`` (:mod:`satsimp.methods.refine.handlers_v3`
 is an alias of this package).  Every public module in this package is
 imported by :mod:`satsimp.methods.refine` and registers its keys into
 ``satsimp.methods.refine.identities.compat.upstream.handlers_dict`` at import time.

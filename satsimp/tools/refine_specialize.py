@@ -28,7 +28,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspa
 from satsimp.tools.lib.select import select  # noqa: E402
 
 select(handlers="handlers_identities")
-os.environ["SATREFINE_IDENTITIES"] = "live"
+os.environ["SATSIMP_IDENTITIES"] = "live"
 
 import satsimp.methods.refine  # noqa: E402,F401  (loads the identity package)
 from satsimp.build import stages as _stages  # noqa: E402

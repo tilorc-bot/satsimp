@@ -1,4 +1,4 @@
-"""``SATREFINE_HANDLERS=handlers_v3``: an alias of the reference package :mod:`satsimp.methods.refine.reference.v3`.
+"""``SATSIMP_HANDLERS=handlers_v3``: an alias of the reference package :mod:`satsimp.methods.refine.reference.v3`.
 
 Importing it imports the reference package and its public modules (in the order
 :mod:`satsimp.methods.refine` loads a handler package, so the handlers register as before),

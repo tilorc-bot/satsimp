@@ -28,7 +28,7 @@ import sys
 
 SCRIPT = """
 import os
-os.environ["SATREFINE_HANDLERS"] = "handlers_identities"
+os.environ["SATSIMP_HANDLERS"] = "handlers_identities"
 from sympy import Q, Symbol, log
 from satsimp import refine
 x = Symbol('x')

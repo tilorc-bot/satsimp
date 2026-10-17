@@ -1,7 +1,7 @@
 """A pytest suite under each ``ask`` backend: running it and reading its junit file.
 
-Each backend runs in its own pytest subprocess with ``SATREFINE_BACKEND`` set
-(and ``SATREFINE_HANDLERS``, if given), so the environment of the calling
+Each backend runs in its own pytest subprocess with ``SATSIMP_BACKEND`` set
+(and ``SATSIMP_HANDLERS``, if given), so the environment of the calling
 shell (``PYTHONPATH`` in particular) is what the runs see.  The junit file
 also carries the ``ask`` query counts per test (properties ``ask_<kind>``).
 """
@@ -22,9 +22,9 @@ OUT_OF_SCOPE = ("relation", "matrix", "custom", "other")
 
 def run_backend(backend: str, suite: str, junit: Path, pytest_args: list[str], handlers: str | None = None) -> float:
     """Run ``suite`` under ``backend``, writing ``junit``; the wall time."""
-    env = dict(os.environ, SATREFINE_BACKEND=backend)
+    env = dict(os.environ, SATSIMP_BACKEND=backend)
     if handlers:
-        env["SATREFINE_HANDLERS"] = handlers
+        env["SATSIMP_HANDLERS"] = handlers
     cmd = [sys.executable, "-m", "pytest", "-q", "-p", "no:cacheprovider",
            "--junitxml", str(junit), suite, *pytest_args]
     start = perf_counter()

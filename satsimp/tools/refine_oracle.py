@@ -67,6 +67,8 @@ import time
 import traceback
 from pathlib import Path
 
+from satsimp.engine.config import env   # imports no method: the handler package is chosen first
+
 ROOT = Path(__file__).resolve().parents[2]
 
 
@@ -77,8 +79,8 @@ ROOT = Path(__file__).resolve().parents[2]
 def parse_args(argv=None):
     p = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     p.add_argument("--mode", choices=("a", "b", "both"), default="both")
-    p.add_argument("--handlers", default=os.environ.get("SATREFINE_HANDLERS", "handlers_identities"),
-                   help="handler package inside satsimp (sets SATREFINE_HANDLERS)")
+    p.add_argument("--handlers", default=env("HANDLERS", "handlers_identities"),
+                   help="handler package inside satsimp (sets SATSIMP_HANDLERS)")
     p.add_argument("--backend", default="combined")
     p.add_argument("--show", choices=("gaps", "unsound", "all"), default="unsound")
     p.add_argument("--keys", default="", help="comma-separated handler keys (mode A filter)")

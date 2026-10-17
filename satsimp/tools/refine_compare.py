@@ -108,7 +108,7 @@ def dump_differential(seed: int, cases: int, timeout: int) -> tuple[list[dict], 
         res = run_json_worker("satsimp.tools.refine_differential",
                               ["--worker", PACKAGE, "--seed", str(seed), "--cases", str(cases), "--out", out,
                                "--timeout", str(timeout)],
-                              out, env={"SATREFINE_HANDLERS": PACKAGE}, failure="differential worker failed")
+                              out, env={"SATSIMP_HANDLERS": PACKAGE}, failure="differential worker failed")
     records = []
     for r in res["records"]:
         g = generate(seed, r["case"])
@@ -120,9 +120,10 @@ def dump_differential(seed: int, cases: int, timeout: int) -> tuple[list[dict], 
 
 
 def dump(out: str, seed: int, cases: int, timeout: int, expect: str | None = None) -> None:
+    from satsimp.engine.config import env_setdefault
     from satsimp.tools.lib.select import select
     select(handlers=PACKAGE)
-    os.environ.setdefault("SATREFINE_STRICT_LOOPS", "1")   # a tripped loop guard is a crash here
+    env_setdefault("STRICT_LOOPS", "1")   # a tripped loop guard is a crash here
     import satsimp.methods.refine  # noqa: F401
 
     version = satassume_version()

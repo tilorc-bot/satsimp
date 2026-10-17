@@ -6,8 +6,8 @@ hypothesis)`` rows and literal ``handlers_dict['key'] = rule_handler(RULES)``
 assignments, where ``handlers_dict`` is
 :data:`satsimp.engine.driver.generated_handlers`).
 The dispatcher prefers a generated handler for a key when
-``SATREFINE_IDENTITIES`` is ``generated`` (the default) and falls back to
-the live identity handler otherwise; ``SATREFINE_IDENTITIES=live`` ignores
+``SATSIMP_IDENTITIES`` is ``generated`` (the default) and falls back to
+the live identity handler otherwise; ``SATSIMP_IDENTITIES=live`` ignores
 the generated tables.  ``tests/refine_identities/build/test_generated.py`` checks
 that regenerating gives the committed modules.
 """

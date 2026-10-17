@@ -7,7 +7,7 @@
   ``satsimp.methods.refine.reference`` (v3, measuring material; only its alias
   ``handlers_v3`` does).  A subprocess makes the offline packages unimportable
   (a meta-path finder that raises) before it imports ``satsimp``, then refines a
-  few inputs in each ``SATREFINE_IDENTITIES`` mode; the results must be what
+  few inputs in each ``SATSIMP_IDENTITIES`` mode; the results must be what
   this process gets.  Importing ``satsimp`` alone loads no method.
 * **The engine imports no method** (``satsimp.engine`` never imports
   ``satsimp.methods``: a method plugs in through ``engine/hooks.py``), and
@@ -91,7 +91,7 @@ def _expected() -> list[str]:
 @pytest.mark.parametrize("mode", ["generated", "live"])
 def test_refine_runs_without_the_offline_packages(mode):
     code = _CHILD % {"offline": OFFLINE + REFERENCE, "cases": CASES}
-    env = dict(os.environ, SATREFINE_HANDLERS="handlers_identities", SATREFINE_IDENTITIES=mode,
+    env = dict(os.environ, SATSIMP_HANDLERS="handlers_identities", SATSIMP_IDENTITIES=mode,
                PYTHONPATH=os.pathsep.join(sys.path))
     proc = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, env=env, timeout=600)
     assert proc.returncode == 0, proc.stderr[-3000:]
@@ -145,6 +145,12 @@ def test_the_offline_packages_are_not_imported_by_the_runtime():
 def test_the_reference_is_not_imported_by_the_runtime():
     """No runtime module imports ``satsimp.methods.refine.reference`` (v3), even lazily."""
     found = _imports(_runtime(), REFERENCE)
+    assert not found, found
+
+
+def test_the_deprecated_alias_is_not_imported_by_satsimp():
+    """No module of ``satsimp`` imports ``satrefine``, the deprecated alias of its old name."""
+    found = _imports(PACKAGE, ("satrefine",))
     assert not found, found
 
 

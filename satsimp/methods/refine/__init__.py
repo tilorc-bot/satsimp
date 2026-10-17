@@ -2,7 +2,7 @@
 
 The vendored dispatcher and initial handlers live in
 :mod:`satsimp.methods.refine.identities.compat.upstream`; the handler package selected
-with ``SATREFINE_HANDLERS`` (default ``handlers_identities``; the reference
+with ``SATSIMP_HANDLERS`` (default ``handlers_identities``; the reference
 ``handlers_v3``) registers its handlers into ``handlers_dict`` when this
 package is imported.  The machinery the handlers run on is :mod:`satsimp.engine`.
 """

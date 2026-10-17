@@ -2,7 +2,7 @@
 
 The suite runs against the default handler package
 (:data:`satsimp.methods.refine.DEFAULT_HANDLERS`, ``handlers_identities``) unless
-``SATREFINE_HANDLERS`` selects another one.  It was written for the original
+``SATSIMP_HANDLERS`` selects another one.  It was written for the original
 package, ``satrefine.handlers``, which was removed in phase 3 with the tests of
 its internals (``docs/refine.md``, "Three implementations";
 ``docs/refine-testing.md``, "Test trees", for how the suite was

@@ -21,7 +21,8 @@ dependencies = [
 dev = ["pytest", "pytest-xdist", "hypothesis", "z3-solver"]
 
 [tool.setuptools.packages.find]
-include = ["satsimp*"]
+# satrefine: the deprecated alias of the package's old name (one module, re-exporting refine)
+include = ["satsimp*", "satrefine"]
 # offline parts (table generation, tools, test fixtures) and refine's reference handlers
 # (satsimp.methods.refine.reference, selected as handlers_v3) are dev-only
 exclude = ["satsimp.build*", "satsimp.tools*", "satsimp.testing*", "satsimp.methods.refine.reference*"]

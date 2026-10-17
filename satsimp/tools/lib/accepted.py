@@ -15,7 +15,7 @@ too, so this list is kept current.
 * ``case``: ``"<expr> | <assumptions>"``, as ``str`` prints them;
 * ``got``: our result, as ``str`` prints it (for a miss, the input);
 * ``reason``: why it is accepted;
-* ``modes``: the ``SATREFINE_IDENTITIES`` modes it applies to (a case that
+* ``modes``: the ``SATSIMP_IDENTITIES`` modes it applies to (a case that
   differs in one mode only).
 
 Reviewed 2026-09-26 (phase 3, track D rows and d-extended); every "extra" is checked

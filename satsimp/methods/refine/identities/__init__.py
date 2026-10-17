@@ -18,7 +18,7 @@ it, never the reverse (``tests/refine_identities/test_import_direction.py``).
                 by hand for one that mixes rule and identity tables;
 ``generated/``  the generated rule tables, one module per family, written by
                 ``python -m satsimp.tools.refine_specialize --write`` and used by
-                the driver when ``SATREFINE_IDENTITIES=generated`` (the
+                the driver when ``SATSIMP_IDENTITIES=generated`` (the
                 default); ``live`` runs the identity rows instead;
 ``compat/``     what is expected to change: SymPy workarounds
                 (:mod:`.compat.sympy_fixes`), the matrix special cases (the
@@ -26,7 +26,7 @@ it, never the reverse (``tests/refine_identities/test_import_direction.py``).
                 :mod:`.compat.matrices`) and the vendored refine dispatcher
                 (:mod:`.compat.upstream`).
 
-The package is selected with ``SATREFINE_HANDLERS=handlers_identities`` (the
+The package is selected with ``SATSIMP_HANDLERS=handlers_identities`` (the
 default); :mod:`satsimp.methods.refine.handlers_identities` calls :func:`load`.
 
 A family module states its rows in module-level tables under the names the

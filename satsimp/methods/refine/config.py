@@ -1,15 +1,17 @@
 """refine's own environment switch: which handler package :mod:`satsimp.methods.refine` loads.
 
-``SATREFINE_HANDLERS``     the handler package (read once, when the method is imported).
+``SATSIMP_HANDLERS``     the handler package (read once, when the method is imported;
+                        ``SATREFINE_HANDLERS`` is read as a deprecated fallback, see
+                        :func:`satsimp.engine.config.env`).
 
 The engine's switches (generated tables or live rows, strict loop guard, ``ask`` backend)
 are in :mod:`satsimp.engine.config` and :mod:`satsimp.engine.backend`.
 """
 from __future__ import annotations
 
-import os
+from satsimp.engine.config import env
 
-HANDLERS_ENV_VAR = "SATREFINE_HANDLERS"
+HANDLERS_ENV_VAR = "SATSIMP_HANDLERS"
 """Name of the handler package to load, relative to ``satsimp.methods.refine``.
 
 Defaults to :data:`DEFAULT_HANDLERS`.  The reference implementation of the
@@ -24,4 +26,4 @@ DEFAULT_HANDLERS = "handlers_identities"
 
 def handlers_package() -> str:
     """The handler package the environment selects."""
-    return os.environ.get(HANDLERS_ENV_VAR, DEFAULT_HANDLERS)
+    return env("HANDLERS", DEFAULT_HANDLERS)

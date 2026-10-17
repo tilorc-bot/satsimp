@@ -201,7 +201,7 @@ def measure(args, drop: list[int], gates: tuple[str, ...]) -> dict:
         out = os.path.join(tmp, "m.json")
         cmd = [args.family, "--worker", "--out", out, "--drop", ",".join(map(str, drop)), "--gates", ",".join(gates),
                "--seed", str(args.seed), "--cases", str(args.cases), "--timeout", str(args.timeout)]
-        return run_json_worker("satsimp.tools.refine_ablate", cmd, out, env={"SATREFINE_HANDLERS": "handlers_identities"},
+        return run_json_worker("satsimp.tools.refine_ablate", cmd, out, env={"SATSIMP_HANDLERS": "handlers_identities"},
                                failure=f"worker failed for drop={drop}", tail=3000, cwd=ROOT)
 
 

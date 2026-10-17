@@ -69,7 +69,7 @@ def test_generated_tables_are_registered_and_preferred(monkeypatch):
 SMOKE_FAMILY = "inverse"
 """The one family whose fixpoint check runs by default (the cheapest to
 regenerate); the others are marked ``full`` and run when
-``SATREFINE_FULL_TESTS=1`` (see ``conftest.py``; the gates run them)."""
+``SATSIMP_FULL_TESTS=1`` (see ``conftest.py``; the gates run them)."""
 
 
 def _family_param(module):

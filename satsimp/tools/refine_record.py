@@ -1,6 +1,6 @@
 """Record the ``ask`` query stream that satsimp issues over its battery.
 
-    PYTHONHASHSEED=0 SATREFINE_HANDLERS=handlers_identities SATREFINE_IDENTITIES=generated \
+    PYTHONHASHSEED=0 SATSIMP_HANDLERS=handlers_identities SATSIMP_IDENTITIES=generated \
       PYTHONPATH=.:/path/to/sympy python -m satsimp.tools.refine_record stream.pkl
 
 Needs a checkout that has ``satsimp`` and ``tests/refine_identities``

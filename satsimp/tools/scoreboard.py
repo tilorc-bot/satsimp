@@ -27,7 +27,7 @@ form, miss, quiet, extra, numerically wrong, crash, plus the cases it could
 not check numerically; totals and a per-family table.
 
 ``suite``: each backend runs the suite in its own pytest subprocess with
-``SATREFINE_BACKEND`` set, and the outcomes are compared:
+``SATSIMP_BACKEND`` set, and the outcomes are compared:
 
 * a test that passes under ``sympy`` and fails under ``satassume`` is a
   satassume gap (a template or rule the engine lacks, or an out-of-scope
@@ -53,6 +53,7 @@ import tempfile
 from collections import Counter, defaultdict
 from pathlib import Path
 
+from satsimp.engine.config import env, env_setdefault
 from satsimp.tools.lib import accepted as acc
 from satsimp.tools.lib import battery as bat
 from satsimp.tools.lib import sizes
@@ -69,7 +70,7 @@ COMMANDS = ("battery", "lines", "suite")
 # ---------------------------------------------------------------------------
 
 def print_rows() -> None:
-    print(f"rows per family (handlers_identities, SATREFINE_IDENTITIES={os.environ.get('SATREFINE_IDENTITIES', 'generated')})")
+    print(f"rows per family (handlers_identities, SATSIMP_IDENTITIES={env('IDENTITIES', 'generated')})")
     print(f"  {'module':18s} {'facts':>6s} {'exp':>6s} {'rules':>6s} {'simple':>6s} {'ranges':>6s} {'stage0':>6s} "
           f"{'generated':>10s}")
     total = Counter()
@@ -103,7 +104,7 @@ def run_battery(cases: list, show: bool, families: list | None = None) -> None:
     with the same result is *accepted*; the others are *open* and are printed
     after the totals, with the accepted entries that no longer apply (stale)
     and the extras that could not be checked numerically."""
-    mode = os.environ.get("SATREFINE_IDENTITIES", "generated")
+    mode = env("IDENTITIES", "generated")
     known_limit = bat.known_oracle_limit()
     accepted_table = acc.table(mode)
     counts: Counter = Counter()
@@ -152,7 +153,7 @@ def run_battery(cases: list, show: bool, families: list | None = None) -> None:
         print(f"\n  {n} handler results were not SymPy objects (sympified by the dispatcher):")
         for (key, handler), count in sorted(non_basic_returns.items()):
             print(f"    {count:5d}  {key}: {handler}")
-    print(f"\nbattery: {total} cases, handlers={os.environ.get('SATREFINE_HANDLERS', 'handlers_identities')}, "
+    print(f"\nbattery: {total} cases, handlers={env('HANDLERS', 'handlers_identities')}, "
           f"identities={mode}")
     for key in bat.KEYS:
         if counts[key]:
@@ -184,7 +185,7 @@ def run_battery(cases: list, show: bool, families: list | None = None) -> None:
 
 def battery(args) -> int:
     select(handlers=args.handlers)
-    os.environ.setdefault("SATREFINE_STRICT_LOOPS", "1")   # a tripped loop guard is a crash here
+    env_setdefault("STRICT_LOOPS", "1")   # a tripped loop guard is a crash here
     import satsimp.methods.refine  # noqa: F401
     if args.handlers == "handlers_identities":
         print_rows()
@@ -339,7 +340,7 @@ def parser() -> argparse.ArgumentParser:
     p = sub.add_parser("suite", help="a test suite under each ask backend")
     p.add_argument("--backends", default=",".join(st.BACKENDS))
     p.add_argument("--suite", default="tests/refine")
-    p.add_argument("--handlers", help="handler package to load (SATREFINE_HANDLERS), e.g. handlers_v3")
+    p.add_argument("--handlers", help="handler package to load (SATSIMP_HANDLERS), e.g. handlers_v3")
     p.add_argument("--junit-dir", type=Path, help="directory to keep junit-<backend>.xml in")
     p.add_argument("--reuse", type=Path, help="read junit-<backend>.xml from this directory instead of running")
     p.add_argument("--show-failures", metavar="BACKEND", help="print every failing test of this backend with its message")

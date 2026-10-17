@@ -5,7 +5,7 @@ file at a time with this plugin and ``CAPTURE_OUT`` naming the JSON output::
 
     for f in trig hyperbolic inverse power_exp_log complex_parts integer_funcs \
              combinatorial minmax_deltas matrices; do
-        CAPTURE_OUT=/tmp/cap/$f.json SATREFINE_HANDLERS=handlers_v3 \
+        CAPTURE_OUT=/tmp/cap/$f.json SATSIMP_HANDLERS=handlers_v3 \
         PYTHONPATH=.:/path/to/sympy python -m pytest -q -p no:cacheprovider \
             -p satsimp.tools.refine_battery_capture tests/refine_v3/test_$f.py
     done
@@ -24,7 +24,7 @@ if __name__ == "__main__":                   # a pytest plugin (-p), not a comma
     print(__doc__)
     sys.exit(0)
 
-os.environ["SATREFINE_HANDLERS"] = "handlers_v3"
+os.environ["SATSIMP_HANDLERS"] = "handlers_v3"
 import importlib
 import pkgutil
 

@@ -7,7 +7,7 @@ refine's modules of the same name (``compat/`` also the ``ask`` backend,
 rows of ``regressions.py``; ``needs/`` holds open requests.
 
 Selects the package before ``satsimp`` is imported so a plain
-``pytest tests/refine_identities`` works; ``SATREFINE_BACKEND`` selects the
+``pytest tests/refine_identities`` works; ``SATSIMP_BACKEND`` selects the
 ask backend as everywhere else.
 """
 from __future__ import annotations
@@ -18,10 +18,12 @@ from pathlib import Path
 
 import pytest
 
-os.environ.setdefault("SATREFINE_HANDLERS", "handlers_identities")
-os.environ.setdefault("SATREFINE_STRICT_LOOPS", "1")   # a tripped loop guard fails the test
+from satsimp.engine.config import env, env_setdefault   # imports no method: the handler package is chosen first
+
+env_setdefault("HANDLERS", "handlers_identities")
+env_setdefault("STRICT_LOOPS", "1")   # a tripped loop guard fails the test
 if "satsimp.methods.refine" in sys.modules and \
-        "satsimp.methods.refine." + os.environ["SATREFINE_HANDLERS"] not in sys.modules:
+        "satsimp.methods.refine." + os.environ["SATSIMP_HANDLERS"] not in sys.modules:
     raise RuntimeError("satsimp.methods.refine was imported before conftest selected the handler package")
 
 from satsimp.testing.harness import query_scope_recorder  # noqa: E402
@@ -32,7 +34,7 @@ def _record_query_scope(request: pytest.FixtureRequest):
     yield from query_scope_recorder()(request)
 
 
-FULL_ENV = "SATREFINE_FULL_TESTS"
+FULL_ENV = "SATSIMP_FULL_TESTS"
 """Set to ``1`` to run the tests marked ``full`` (the gates do, as their own task)."""
 
 
@@ -54,8 +56,8 @@ def pytest_collection_modifyitems(config: pytest.Config, items: list) -> None:
     """Skip the ``full`` tests unless :data:`FULL_ENV` is ``1``: they were most
     of the suite's wall time, and the default run keeps a smaller check of the
     same property (the fixpoint of one family, ``build/test_generated.py``).  Run
-    them alone with ``SATREFINE_FULL_TESTS=1 pytest -m full tests/refine_identities``."""
-    if os.environ.get(FULL_ENV) == "1":
+    them alone with ``SATSIMP_FULL_TESTS=1 pytest -m full tests/refine_identities``."""
+    if env("FULL_TESTS") == "1":   # SATSIMP_FULL_TESTS, or the deprecated SATREFINE_FULL_TESTS
         return
     skip = pytest.mark.skip(reason=f"long check: run with {FULL_ENV}=1")
     for item in items:

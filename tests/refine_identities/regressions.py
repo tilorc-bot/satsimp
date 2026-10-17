@@ -2,7 +2,7 @@
 
 Run by ``test_regressions.py`` in both identity modes (``generated`` and
 ``live``) and under each backend in ``backends`` (``None``: the one
-``SATREFINE_BACKEND`` selects, ``combined`` by default).
+``SATSIMP_BACKEND`` selects, ``combined`` by default).
 
 A row is ``Case(expr, assumptions, expected, bug, reason, backends=None)``:
 

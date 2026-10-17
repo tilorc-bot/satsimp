@@ -3,7 +3,7 @@
 
 Builds random expressions over the handler families, draws random consistent
 assumption sets (unary predicates plus an occasional relation), refines under
-the combined backend (or ``SATREFINE_BACKEND``), and checks every rewrite at random numeric points that
+the combined backend (or ``SATSIMP_BACKEND``), and checks every rewrite at random numeric points that
 satisfy the assumptions, evaluated at 20 digits in the complex plane.  SymPy's
 own refine runs on the same inputs, so inherited upstream bugs can be told
 apart from the handlers' own.  Reported categories: unsound rewrites (with the
@@ -250,13 +250,13 @@ def cli(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("seed", nargs="?", type=int, default=0)
     ap.add_argument("cases", nargs="?", type=int, help="default 3000 (--ext, --matrices: 1000)")
-    ap.add_argument("--handlers", help="handler package (SATREFINE_HANDLERS)")
+    ap.add_argument("--handlers", help="handler package (SATSIMP_HANDLERS)")
     ap.add_argument("--ext", action="store_true", help="the extended family")
     ap.add_argument("--matrices", action="store_true", help="the matrix family")
     args = ap.parse_args(argv)
     if args.handlers:
         select(handlers=args.handlers)
-    backend_from_env()                 # SATREFINE_BACKEND, default combined
+    backend_from_env()                 # SATSIMP_BACKEND, default combined
     if args.ext:
         ext_main(args.seed, 1000 if args.cases is None else args.cases)
     elif args.matrices:

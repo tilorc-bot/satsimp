@@ -66,21 +66,22 @@ on that (issue #18).  The driver returns the input of a refine call whose
 assumptions raise.
 
 The backend is chosen with :func:`set_backend`, temporarily with
-:func:`using`, or at import time from the ``SATREFINE_BACKEND`` environment
-variable.  The default is ``combined``.
+:func:`using`, or at import time from the ``SATSIMP_BACKEND`` environment
+variable (``SATREFINE_BACKEND``, deprecated, as a fallback).  The default is ``combined``.
 """
 from __future__ import annotations
 
-import os
 from contextlib import contextmanager
 from functools import lru_cache
 from typing import Any, Callable, Iterator
+
+from . import config
 
 Ask = Callable[..., "bool | None"]
 
 BACKENDS = ("sympy", "satassume", "combined", "union")
 DEFAULT = "combined"
-ENV_VAR = "SATREFINE_BACKEND"
+ENV_VAR = "SATSIMP_BACKEND"
 
 
 def _sympy_ask(proposition: Any, assumptions: Any = True) -> bool | None:
@@ -430,7 +431,7 @@ def _validate(name: str) -> str:
     return name
 
 
-_current: str = _validate(os.environ.get(ENV_VAR, DEFAULT))
+_current: str = _validate(config.env("BACKEND", DEFAULT))
 
 
 def current() -> str:

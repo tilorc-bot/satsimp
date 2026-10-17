@@ -7,15 +7,15 @@
 # SLOTS gate jobs machine-wide across concurrent gate runs (default 8; lock files in
 # $GATE_SLOTS_DIR, default /tmp/refine-gate-slots; the suite holds 3 slots for its workers):
 #   the tests/refine_identities suite (pytest-xdist, SUITE_WORKERS workers, default 3),
-#   the battery scoreboard (scoreboard battery) in both SATREFINE_IDENTITIES modes,
+#   the battery scoreboard (scoreboard battery) in both SATSIMP_IDENTITIES modes,
 #   the differential against handlers_v3 for seeds 2, 3, 7 at 1,500 cases in both modes,
-#   the same for seed 2 with SATREFINE_BACKEND=satassume, in both modes,
+#   the same for seed 2 with SATSIMP_BACKEND=satassume, in both modes,
 #   the extended family (--ext: infinities, Piecewise, inverse pairs) for seed 2 at EXT_CASES
 #   cases (default 1,000; 20 s per-case timeout, KroneckerDelta at +-oo is slow) and the matrix family (--matrices) for seed 2 at MAT_CASES cases
 #   (default 1,500), both in both modes, as sections of their own (the default seeds' case
 #   streams are unchanged, so their sections still compare 1:1 with older baselines),
 #   tests/refine (SymPy's refine tests and the verifier tests) under the default package,
-#   the tests behind the opt-in marker `full` (the full fixpoints; SATREFINE_FULL_TESTS=1),
+#   the tests behind the opt-in marker `full` (the full fixpoints; SATSIMP_FULL_TESTS=1),
 #   the termination tests (B9) with the adversarial-ask fuzz on their own, so the summary shows
 #   they ran: small by default (as in the suite, seconds); TERMINATION_FUZZ=N runs N random
 #   cases and the whole battery instead (N=150: about 10 minutes on one core).
@@ -44,17 +44,17 @@ uvrun=(uv run --no-project --with pytest --with pytest-xdist --with mpmath --wit
 tasks=()
 tasks+=("suite|timeout 2400 ${uvrun[*]} -m pytest -q -p no:cacheprovider -n $workers tests/refine_identities")
 tasks+=("refine|timeout 2400 ${uvrun[*]} -m pytest -q -p no:cacheprovider -n 2 tests/refine")
-tasks+=("full|env SATREFINE_FULL_TESTS=1 timeout 2400 ${uvrun[*]} -m pytest -q -p no:cacheprovider -n 3 -m full tests/refine_identities")
+tasks+=("full|env SATSIMP_FULL_TESTS=1 timeout 2400 ${uvrun[*]} -m pytest -q -p no:cacheprovider -n 3 -m full tests/refine_identities")
 for m in generated live; do
-  tasks+=("score-$m|env SATREFINE_IDENTITIES=$m timeout 3000 ${uvrun[*]} -m satsimp.tools.scoreboard battery")
+  tasks+=("score-$m|env SATSIMP_IDENTITIES=$m timeout 3000 ${uvrun[*]} -m satsimp.tools.scoreboard battery")
   for s in 2 3 7; do
-    tasks+=("diff-$m-$s|env SATREFINE_IDENTITIES=$m timeout 3600 ${uvrun[*]} -m satsimp.tools.refine_differential --summary --seed $s --cases 1500")
+    tasks+=("diff-$m-$s|env SATSIMP_IDENTITIES=$m timeout 3600 ${uvrun[*]} -m satsimp.tools.refine_differential --summary --seed $s --cases 1500")
   done
-  tasks+=("diffsa-$m-2|env SATREFINE_BACKEND=satassume SATREFINE_IDENTITIES=$m timeout 3600 ${uvrun[*]} -m satsimp.tools.refine_differential --summary --seed 2 --cases 1500")
-  tasks+=("diffext-$m-2|env SATREFINE_IDENTITIES=$m timeout 3600 ${uvrun[*]} -m satsimp.tools.refine_differential --summary --ext --timeout 20 --seed 2 --cases $extcases")
-  tasks+=("diffmat-$m-2|env SATREFINE_IDENTITIES=$m timeout 3600 ${uvrun[*]} -m satsimp.tools.refine_differential --summary --matrices --seed 2 --cases $matcases")
+  tasks+=("diffsa-$m-2|env SATSIMP_BACKEND=satassume SATSIMP_IDENTITIES=$m timeout 3600 ${uvrun[*]} -m satsimp.tools.refine_differential --summary --seed 2 --cases 1500")
+  tasks+=("diffext-$m-2|env SATSIMP_IDENTITIES=$m timeout 3600 ${uvrun[*]} -m satsimp.tools.refine_differential --summary --ext --timeout 20 --seed 2 --cases $extcases")
+  tasks+=("diffmat-$m-2|env SATSIMP_IDENTITIES=$m timeout 3600 ${uvrun[*]} -m satsimp.tools.refine_differential --summary --matrices --seed 2 --cases $matcases")
 done
-tasks+=("termination|env SATREFINE_TERMINATION_FUZZ=$termfuzz timeout 3000 ${uvrun[*]} -m pytest -q -s -p no:cacheprovider tests/refine_identities/test_engine_termination.py")
+tasks+=("termination|env SATSIMP_TERMINATION_FUZZ=$termfuzz timeout 3000 ${uvrun[*]} -m pytest -q -s -p no:cacheprovider tests/refine_identities/test_engine_termination.py")
 
 start=$(date +%s)
 printf '%s\n' "${tasks[@]}" | xargs -P "$jobs" -I{} bash -c '

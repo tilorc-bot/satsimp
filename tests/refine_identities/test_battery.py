@@ -1,13 +1,13 @@
 """The ``handlers_v3`` acceptance battery (``battery_v3.py``).
 
 ``test_battery_matches_v3`` proves the battery faithful: every case run
-through ``satsimp.refine`` with ``SATREFINE_HANDLERS=handlers_v3`` gives
+through ``satsimp.refine`` with ``SATSIMP_HANDLERS=handlers_v3`` gives
 exactly the recorded value (or leaves the input unchanged where the value
 is ``None``).  It needs ``handlers_v3`` to be the loaded package and skips
 otherwise (the conftest of this directory loads ``handlers_identities``
 unless the variable is set when pytest starts)::
 
-    SATREFINE_HANDLERS=handlers_v3 PYTHONPATH=.:/path/to/sympy \\
+    SATSIMP_HANDLERS=handlers_v3 PYTHONPATH=.:/path/to/sympy \\
         python -m pytest -q tests/refine_identities/test_battery.py
 
 ``test_battery_is_numerically_valid`` checks every case that fires with
@@ -26,7 +26,7 @@ import sys
 import pytest
 
 if "satsimp.methods.refine" not in sys.modules:
-    os.environ["SATREFINE_HANDLERS"] = "handlers_v3"
+    os.environ["SATSIMP_HANDLERS"] = "handlers_v3"
 
 from battery_v3 import BATTERY
 from sympy import DiracDelta, MatrixSymbol, Rem, zoo
@@ -61,7 +61,7 @@ FIRING = [(case, case_id) for case, case_id in zip(BATTERY, IDS) if case[2] is n
 
 
 @pytest.mark.skipif(not V3_LOADED, reason="handlers_v3 is not the loaded handler package "
-                    "(set SATREFINE_HANDLERS=handlers_v3 before pytest starts)")
+                    "(set SATSIMP_HANDLERS=handlers_v3 before pytest starts)")
 @pytest.mark.parametrize("expr, assumptions, expected, source", BATTERY, ids=IDS)
 def test_battery_matches_v3(expr, assumptions, expected, source):
     refined = refine(expr, assumptions)
@@ -74,7 +74,7 @@ def test_battery_matches_v3(expr, assumptions, expected, source):
 SLOW_SAMPLING = {"1571:test_minmax_deltas.py::test_minmax_all_equal_keeps_one"}
 """Cases whose numeric check takes half a minute (the sampler's search for a
 point satisfying three equalities); marked ``full``, run when
-``SATREFINE_FULL_TESTS=1`` (see ``conftest.py``)."""
+``SATSIMP_FULL_TESTS=1`` (see ``conftest.py``)."""
 
 
 @pytest.mark.parametrize("expr, assumptions, expected, source",
