@@ -26,6 +26,7 @@ would only repeat the open PR or issue.
 from __future__ import annotations
 
 import argparse
+import os
 import re
 import sys
 import xml.etree.ElementTree as ET
@@ -34,7 +35,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 PYPROJECT = ROOT / "pyproject.toml"
-REPO = "https://github.com/tilorc-bot/satassume"
+REPO = os.environ.get("SATASSUME_REPO") or "https://github.com/tilorc-bot/satassume"
+"""The satassume repository (the workflow's ``SATASSUME_REPO``), for compare links."""
 TREES = ("tests/refine_identities", "tests/refine", "tests/refine_v3")
 MARKER = "<!-- satassume-bump satrefine={satrefine} satassume={satassume} -->"
 MARKER_RE = re.compile(r"<!-- satassume-bump satrefine=(\w+) satassume=(\w+) -->")
@@ -155,6 +157,12 @@ def excerpt(text: str, limit: int = EXCERPT) -> str:
     return text if len(text) <= limit else "...\n" + text[-limit:]
 
 
+def fenced(text: str) -> list[str]:
+    """``text`` as a Markdown code block whose fence is longer than any run of backticks in it."""
+    fence = "`" * max(3, 1 + max((len(run) for run in re.findall(r"`+", text)), default=0))
+    return [fence, text, fence]
+
+
 def tests_section(results: dict[str, dict[str, TreeResult | None]]) -> list[str]:
     if not results:
         return ["No test results were found (the test jobs did not upload any)."]
@@ -182,7 +190,7 @@ def tests_section(results: dict[str, dict[str, TreeResult | None]]) -> list[str]
             message = message.replace("`", "'") or "no message"
             others = f" and {more} more" if more else ""
             lines += [f"**{len(group)} x** `{message}`: `{test_id}` (Python {p}){others}", "",
-                      "```", excerpt(text), "```", ""]
+                      *fenced(excerpt(text)), ""]
     return lines
 
 
@@ -192,9 +200,9 @@ def tests_section(results: dict[str, dict[str, TreeResult | None]]) -> list[str]
 
 def report(kind: str, old: str, new: str, satrefine: str, commits: int | None = None,
            results: Path | None = None, compare: Path | None = None, failed: list[str] = (),
-           run_url: str | None = None, pat: bool = False) -> str:
+           run_url: str | None = None, pat: bool = False, repo: str = REPO) -> str:
     """The Markdown body of the bump PR (``kind="pr"``) or of the tracking issue (``"issue"``)."""
-    rng = f"[`{old[:7]}...{new[:7]}`]({REPO}/compare/{old}...{new})"
+    rng = f"[`{old[:7]}...{new[:7]}`]({repo}/compare/{old}...{new})"
     count = f" ({commits} commits)" if commits is not None else ""
     run = f"[this run]({run_url})" if run_url else "the nightly run"
     if kind == "pr":
@@ -204,7 +212,11 @@ def report(kind: str, old: str, new: str, satrefine: str, commits: int | None = 
                   f"which ran satrefine's tests (as `.github/workflows/test.yml` runs them) against the new "
                   f"commit and compared refine's outputs at the old pin and the new commit, on satrefine "
                   f"`{satrefine[:7]}`. Merging it is a review decision: the comparison below lists the answers "
-                  f"that change.")]
+                  f"that change."),
+                 "",
+                 ("The branch `satassume-bump` belongs to the workflow: every passing run force-pushes it with "
+                  "only the pin change, so commits pushed to it are lost. Make any fix the bump needs in a separate "
+                  "PR; the next run then tests the bump on top of it.")]
     else:
         lines = [(f"The satassume bump workflow fails for satassume `main` at `{new[:7]}` "
                   f"(pin `{old[:7]}`{count}: {rng}), on satrefine `{satrefine[:7]}`: {run}."),
@@ -235,9 +247,12 @@ def report(kind: str, old: str, new: str, satrefine: str, commits: int | None = 
 
 
 def marker(body: str) -> tuple[str, str] | None:
-    """(satrefine commit, satassume commit) of a report's marker, or None."""
-    m = MARKER_RE.search(body or "")
-    return (m.group(1), m.group(2)) if m else None
+    """(satrefine commit, satassume commit) of a report's marker, or None.
+
+    The last match: the marker ends the report, and the test output quoted
+    above it may contain marker-like text."""
+    found = MARKER_RE.findall(body or "")
+    return found[-1] if found else None
 
 
 # ---------------------------------------------------------------------------
@@ -265,6 +280,7 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--failed", nargs="*", default=[], help="the jobs that failed")
     p.add_argument("--run-url")
     p.add_argument("--pat", action="store_true", help="the PR is opened with a token that starts test.yml on it")
+    p.add_argument("--repo", default=REPO, help="the satassume repository URL (default: $SATASSUME_REPO)")
     args = ap.parse_args(argv)
     if args.command == "pin":
         text = sys.stdin.read() if args.pyproject == "-" else Path(args.pyproject).read_text()
@@ -277,7 +293,7 @@ def main(argv: list[str] | None = None) -> int:
         print(" ".join(m) if m else "")
     else:
         sys.stdout.write(report(args.kind, args.old, args.new, args.satrefine, args.commits, args.results,
-                                args.compare, args.failed, args.run_url, args.pat))
+                                args.compare, args.failed, args.run_url, args.pat, args.repo))
     return 0
 
 

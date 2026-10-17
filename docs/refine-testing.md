@@ -102,10 +102,15 @@ inputs; each dump about 1.5 minutes). If everything passes it opens or
 updates the one bump PR (branch `satassume-bump`) with the commit range, the
 test results and the comparison; if not, the one tracking issue (label
 `satassume-bump`), which the next passing run closes. A run whose commits
-the open PR or issue already covers is skipped (`force` re-runs it).
-`satrefine/tools/satassume_bump.py` (standard library only) reads and
-rewrites the pin, either `satassume @ git+URL@COMMIT` or `satassume==VERSION`,
-and writes the reports. The same by hand:
+the open PR or issue already covers is skipped (`force` re-runs it); once the
+pin is `main` (moved by hand), a bump PR or issue still open is closed. Only
+same-repository PRs count: a fork's PR from a branch of the same name is
+ignored. The branch `satassume-bump` belongs to the workflow, which
+force-pushes it with only the pin change: do not push to it, make a fix the
+bump needs in a separate PR. `satrefine/tools/satassume_bump.py` (standard
+library only) reads and rewrites the pin, either `satassume @ git+URL@COMMIT`
+or `satassume==VERSION`, and writes the reports; the workflow bumps only a
+commit pin (it resolves `main`, not the latest release). The same by hand:
 
 ```bash
 python satrefine/tools/satassume_bump.py pin

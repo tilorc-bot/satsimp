@@ -6,7 +6,10 @@ here they run on the real ``pyproject.toml`` and on small made-up results.
 from __future__ import annotations
 
 import importlib
+import json
 import re
+import shutil
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -68,6 +71,40 @@ def test_workflow_installs_the_sympy_of_test_yml():
     assert set(sympy("satassume-bump.yml")) == set(sympy("test.yml")) and len(set(sympy("test.yml"))) == 1
 
 
+def _pr_lookups() -> list[tuple[str, str]]:
+    """(``--json`` fields, ``--jq`` filter) of every ``gh pr list`` in the workflow."""
+    text = (ROOT / ".github" / "workflows" / "satassume-bump.yml").read_text()
+    found = re.findall(r"gh pr list [^\n]*?--json (\S+) --jq '([^']*)'", text)
+    assert len(found) == text.count("gh pr list --head \"") == 3
+    return found
+
+
+def test_workflow_ignores_pull_requests_from_forks():
+    """``gh pr list --head B`` also lists a fork's PR from a branch named B; every lookup must drop it."""
+    prs = [{"number": 7, "body": "fork <!-- satassume-bump satrefine=c satassume=b -->", "isCrossRepository": True},
+           {"number": 9, "body": "ours", "isCrossRepository": False}]
+    jq = shutil.which("jq")
+    for fields, query in _pr_lookups():
+        assert "isCrossRepository" in fields.split(",") and "select(.isCrossRepository | not)" in query
+        if jq is None:
+            continue
+        for listed, want in ((prs, {"ours", "9"}), (prs[:1], {"", "''"})):
+            out = subprocess.run([jq, "-r", query], input=json.dumps(listed), capture_output=True, text=True,
+                                 check=True).stdout.split()
+            assert set(out) <= want and "7" not in out and "fork" not in out, (query, listed, out)
+
+
+def test_marker_is_the_last_one():
+    quoted = "```\nE  assert '<!-- satassume-bump satrefine=x satassume=y -->'\n```\n"
+    body = quoted + bump.MARKER.format(satrefine=HEAD, satassume=NEW)
+    assert bump.marker(body) == (HEAD, NEW)
+
+
+def test_excerpt_fence_outlasts_backticks_in_the_text():
+    assert bump.fenced("plain") == ["```", "plain", "```"]
+    assert bump.fenced("a ``` b ```` c")[0] == "`````"
+
+
 JUNIT = """<?xml version="1.0" encoding="utf-8"?><testsuites><testsuite name="pytest" errors="0" failures="1"
 skipped="0" tests="2"><testcase classname="tests.refine.test_a" name="test_ok" time="0.1"/>
 <testcase classname="tests.refine.test_a" name="test_bad" time="0.1"><failure message="assert 1 == 2">
@@ -108,7 +145,7 @@ def test_report_pr(tmp_path):
     body = bump.report("pr", OLD, NEW, HEAD, results=tmp_path / "none", compare=summary)
     assert body.startswith(f"Bumps satassume from `{OLD[:7]}` to `{NEW[:7]}`")
     assert "**0 of 3 battery results change.**" in body and "No test results" in body
-    assert "close and reopen the PR" in body
+    assert "close and reopen the PR" in body and "force-pushes" in body
     assert "close and reopen" not in bump.report("pr", OLD, NEW, HEAD, pat=True)
     assert bump.marker("no marker") is None
 

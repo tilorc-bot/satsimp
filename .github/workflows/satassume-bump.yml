@@ -2,7 +2,10 @@ name: satassume bump
 # Nightly: when satassume main has moved past the commit pinned in pyproject.toml, run the
 # tests against it (as test.yml does) and compare refine's outputs at the pin and at main.
 # All pass: open or update the one bump PR (branch satassume-bump). Something fails: open or
-# update the one tracking issue (label satassume-bump), closed by the next passing run.
+# update the one tracking issue (label satassume-bump), closed by the next passing run. Once the
+# pin is satassume main, a bump PR or tracking issue still open is closed (tidy).
+# The branch satassume-bump belongs to this workflow: every passing run force-pushes it, so do
+# not push to it; make a fix the bump needs in a separate PR.
 # The logic is in satrefine/tools/satassume_bump.py and satrefine/tools/refine_compare.py.
 on:
   schedule:
@@ -24,8 +27,9 @@ env:
   SATASSUME_REPO: https://github.com/tilorc-bot/satassume
   # the SymPy commit test.yml installs (tests/refine_identities/tools/test_satassume_bump.py checks they agree)
   SYMPY: "sympy @ git+https://github.com/tilorc-bot/sympy@6379c4da69"
-  BRANCH: satassume-bump
+  BRANCH: satassume-bump   # force-pushed by publish: not a branch to push to by hand
   LABEL: satassume-bump
+
 defaults:
   run:
     shell: bash   # -eo pipefail, so a pytest piped into tee still fails its step
@@ -37,6 +41,7 @@ jobs:
       pinned: ${{ steps.resolve.outputs.pinned }}
       latest: ${{ steps.resolve.outputs.latest }}
       run: ${{ steps.resolve.outputs.run }}
+      stale: ${{ steps.resolve.outputs.stale }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -48,24 +53,54 @@ jobs:
           FORCE: ${{ inputs.force || false }}
         run: |
           pinned=$(python satrefine/tools/satassume_bump.py pin)
+          # "latest" is satassume main's commit, so only a git commit pin can be bumped; a PyPI pin
+          # (satassume==VERSION, which satassume_bump.py reads and rewrites) would need the latest
+          # release resolved here instead (PyPI's JSON API), or it would be set to a commit hash
+          if ! [[ $pinned =~ ^[0-9a-f]{40}$ ]]; then
+            echo "::error::satassume is pinned to $pinned, not a commit: resolving a PyPI release is not implemented"
+            exit 1
+          fi
           latest=$(git ls-remote "$SATASSUME_REPO" refs/heads/main | cut -f1)
           test -n "$latest"
-          run=true
+          # every `gh pr list --head` keeps same-repository PRs only: --head matches the branch name,
+          # so a fork's PR from a branch called satassume-bump would match too
+          pr=$(gh pr list --head "$BRANCH" --state open --json body,isCrossRepository --jq '[.[] | select(.isCrossRepository | not)][0].body // ""')
+          issue=$(gh issue list --label "$LABEL" --state open --json body --jq '.[0].body // ""')
+          run=true stale=false
           if [ "$pinned" = "$latest" ]; then
             run=false; echo "The pin is satassume main (${latest:0:7})."
+            # a bump PR or tracking issue left open (the pin was moved by hand): tidy closes it
+            [ -z "$pr$issue" ] || stale=true
           elif [ "$FORCE" != true ]; then
             # an open PR or issue whose marker names these commits: a run would only repeat it
             want="$GITHUB_SHA $latest"
-            pr=$(gh pr list --head "$BRANCH" --state open --json body --jq '.[0].body // ""')
-            issue=$(gh issue list --label "$LABEL" --state open --json body --jq '.[0].body // ""')
             for body in "$pr" "$issue"; do
               if [ "$(printf '%s' "$body" | python satrefine/tools/satassume_bump.py marker)" = "$want" ]; then
                 run=false; echo "The open bump PR or issue already covers satrefine ${GITHUB_SHA:0:7}, satassume ${latest:0:7}."
               fi
             done
           fi
-          echo "pinned ${pinned:0:7}, satassume main ${latest:0:7}, run: $run"
-          { echo "pinned=$pinned"; echo "latest=$latest"; echo "run=$run"; } >> "$GITHUB_OUTPUT"
+          echo "pinned ${pinned:0:7}, satassume main ${latest:0:7}, run: $run, stale: $stale"
+          { echo "pinned=$pinned"; echo "latest=$latest"; echo "run=$run"; echo "stale=$stale"; } >> "$GITHUB_OUTPUT"
+
+  tidy:
+    needs: check
+    if: needs.check.outputs.stale == 'true' && (github.event_name == 'schedule' || (github.ref_name == github.event.repository.default_branch && !inputs.dry_run))
+    runs-on: ubuntu-latest
+    permissions: {pull-requests: write, issues: write}
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      LATEST: ${{ needs.check.outputs.latest }}
+    steps:
+      - run: |
+          note="The pin in pyproject.toml is satassume main (\`${LATEST:0:7}\`) on satrefine \`${GITHUB_SHA:0:7}\`: nothing left to bump."
+          for pr in $(gh pr list --head "$BRANCH" --state open --json number,isCrossRepository --jq '.[] | select(.isCrossRepository | not) | .number'); do
+            gh pr close "$pr" --comment "$note"
+          done
+          for issue in $(gh issue list --label "$LABEL" --state open --json number --jq '.[].number'); do
+            gh issue close "$issue" --comment "$note"
+          done
 
   test:
     needs: check
@@ -168,7 +203,7 @@ jobs:
           kind="pr"; [ ${#failed[@]} -eq 0 ] || kind="issue"
           args=(--old "$PINNED" --new "$LATEST" --satrefine "$GITHUB_SHA" --results results
                 --compare results/compare/summary.md --failed "${failed[@]}" --run-url "$RUN_URL")
-          if commits=$(gh api "repos/tilorc-bot/satassume/compare/$PINNED...$LATEST" --jq .ahead_by); then
+          if commits=$(gh api "repos/${SATASSUME_REPO#https://github.com/}/compare/$PINNED...$LATEST" --jq .ahead_by); then
             args+=(--commits "$commits")
           fi
           [ "$PAT" != true ] || args+=(--pat)
@@ -185,8 +220,8 @@ jobs:
             commit -q -m "Bump satassume to $short" \
             -m "satassume main, ${PINNED:0:7}...$short: $SATASSUME_REPO/compare/$PINNED...$LATEST" \
             -m "Tested and compared by the satassume bump workflow: $RUN_URL"
-          git push -f origin "$BRANCH"
-          number=$(gh pr list --head "$BRANCH" --state open --json number --jq '.[0].number // empty')
+          git push -f origin "$BRANCH"   # the branch is the workflow's (see BRANCH)
+          number=$(gh pr list --head "$BRANCH" --state open --json number,isCrossRepository --jq '[.[] | select(.isCrossRepository | not)][0].number // empty')
           if [ -n "$number" ]; then
             gh pr edit "$number" --title "Bump satassume to $short" --body-file body.md
           elif ! url=$(gh pr create --head "$BRANCH" --title "Bump satassume to $short" --body-file body.md); then
