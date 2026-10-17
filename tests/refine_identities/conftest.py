@@ -25,6 +25,7 @@ env_setdefault("STRICT_LOOPS", "1")   # a tripped loop guard fails the test
 if "satsimp.methods.refine" in sys.modules and \
         "satsimp.methods.refine." + os.environ["SATSIMP_HANDLERS"] not in sys.modules:
     raise RuntimeError("satsimp.methods.refine was imported before conftest selected the handler package")
+import satsimp.methods.refine  # noqa: E402,F401  (loads the selected handler package; importing satsimp does not)
 
 from satsimp.testing.harness import query_scope_recorder  # noqa: E402
 

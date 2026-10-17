@@ -77,6 +77,7 @@ def worker(package, seed, cases, out, timeout, matrices=False, ext=False):
     import json
 
     env_setdefault("STRICT_LOOPS", "1")   # a tripped loop guard is a crash here
+    import satsimp.methods.refine  # noqa: F401  (loads the handler package the environment selects)
     assert sys.modules.get("satsimp.methods.refine." + package) is not None, \
         f"satsimp.methods.refine.{package} was not loaded"
     backend_from_env()
