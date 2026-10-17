@@ -63,8 +63,9 @@ engine and methods. What changed for a consumer:
   `DeprecationWarning`: the `satrefine` module ships in the satsimp
   distribution as an alias that re-exports the names `satrefine` had at the
   top level (`refine`, `ask`, `handlers_dict`, the `refine_*` handlers,
-  `HANDLERS_PACKAGE`, `DEFAULT_HANDLERS`). It will be removed in a later
-  release. Submodules are not aliased:
+  `HANDLERS_PACKAGE`, `DEFAULT_HANDLERS`, `HANDLERS_ENV_VAR`,
+  `handlers_package`). It will be removed in a later release. Submodules are
+  not aliased:
 
   | Before | Now |
   |---|---|

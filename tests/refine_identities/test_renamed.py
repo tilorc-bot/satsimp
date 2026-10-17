@@ -36,7 +36,9 @@ x = Symbol("x")
 print(json.dumps({
     "warnings": [str(w.message) for w in caught if w.category is DeprecationWarning],
     "same": satrefine.refine is satsimp.refine is method.refine,
-    "names": all(getattr(satrefine, n) is getattr(method, n) for n in method.__all__),
+    "names": all(getattr(satrefine, n) is getattr(method, n)
+                 for n in [*method.__all__, "HANDLERS_PACKAGE", "DEFAULT_HANDLERS", "HANDLERS_ENV_VAR",
+                           "handlers_package"]),
     "package": satrefine.HANDLERS_PACKAGE,
     "result": str(satrefine.refine(log(x), Q.negative(x))),
 }))
