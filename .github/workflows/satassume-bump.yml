@@ -1,0 +1,213 @@
+name: satassume bump
+# Nightly: when satassume main has moved past the commit pinned in pyproject.toml, run the
+# tests against it (as test.yml does) and compare refine's outputs at the pin and at main.
+# All pass: open or update the one bump PR (branch satassume-bump). Something fails: open or
+# update the one tracking issue (label satassume-bump), closed by the next passing run.
+# The logic is in satrefine/tools/satassume_bump.py and satrefine/tools/refine_compare.py.
+on:
+  schedule:
+    - cron: "17 4 * * *"
+  workflow_dispatch:
+    inputs:
+      force:
+        description: Run even if the open bump PR or issue already covers these commits
+        type: boolean
+        default: false
+      dry_run:
+        description: Test and compare, but only write the report to the run summary
+        type: boolean
+        default: false
+permissions: {}
+concurrency:
+  group: satassume-bump
+env:
+  SATASSUME_REPO: https://github.com/tilorc-bot/satassume
+  # the SymPy commit test.yml installs (tests/refine_identities/tools/test_satassume_bump.py checks they agree)
+  SYMPY: "sympy @ git+https://github.com/tilorc-bot/sympy@6379c4da69"
+  BRANCH: satassume-bump
+  LABEL: satassume-bump
+defaults:
+  run:
+    shell: bash   # -eo pipefail, so a pytest piped into tee still fails its step
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    permissions: {contents: read, pull-requests: read, issues: read}
+    outputs:
+      pinned: ${{ steps.resolve.outputs.pinned }}
+      latest: ${{ steps.resolve.outputs.latest }}
+      run: ${{ steps.resolve.outputs.run }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - id: resolve
+        env:
+          GH_TOKEN: ${{ github.token }}
+          FORCE: ${{ inputs.force || false }}
+        run: |
+          pinned=$(python satrefine/tools/satassume_bump.py pin)
+          latest=$(git ls-remote "$SATASSUME_REPO" refs/heads/main | cut -f1)
+          test -n "$latest"
+          run=true
+          if [ "$pinned" = "$latest" ]; then
+            run=false; echo "The pin is satassume main (${latest:0:7})."
+          elif [ "$FORCE" != true ]; then
+            # an open PR or issue whose marker names these commits: a run would only repeat it
+            want="$GITHUB_SHA $latest"
+            pr=$(gh pr list --head "$BRANCH" --state open --json body --jq '.[0].body // ""')
+            issue=$(gh issue list --label "$LABEL" --state open --json body --jq '.[0].body // ""')
+            for body in "$pr" "$issue"; do
+              if [ "$(printf '%s' "$body" | python satrefine/tools/satassume_bump.py marker)" = "$want" ]; then
+                run=false; echo "The open bump PR or issue already covers satrefine ${GITHUB_SHA:0:7}, satassume ${latest:0:7}."
+              fi
+            done
+          fi
+          echo "pinned ${pinned:0:7}, satassume main ${latest:0:7}, run: $run"
+          { echo "pinned=$pinned"; echo "latest=$latest"; echo "run=$run"; } >> "$GITHUB_OUTPUT"
+
+  test:
+    needs: check
+    if: needs.check.outputs.run == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions: {contents: read}
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.11", "3.12"]
+    env:
+      PYTHONHASHSEED: "0"
+      LATEST: ${{ needs.check.outputs.latest }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      # test.yml's steps on the tree the bump PR would have, with junit files and logs for the report
+      - run: python satrefine/tools/satassume_bump.py set "$LATEST"
+      - run: pip install -e ".[dev]"
+      - run: pip install "$SYMPY"
+      - run: mkdir -p results
+      - run: python -m pytest -q -n auto --junitxml=results/refine_identities.xml tests/refine_identities --ignore=tests/refine_identities/needs 2>&1 | tee results/refine_identities.log
+      - run: python -m pytest -q -n auto --junitxml=results/refine.xml tests/refine 2>&1 | tee results/refine.log
+        if: always()
+      - run: python -m pytest -q -n auto --junitxml=results/refine_v3.xml tests/refine_v3 2>&1 | tee results/refine_v3.log
+        if: always()
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: tests-${{ matrix.python }}
+          path: results/
+          if-no-files-found: ignore
+
+  compare:
+    needs: check
+    if: needs.check.outputs.run == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions: {contents: read}
+    env:
+      PYTHONHASHSEED: "0"
+      PINNED: ${{ needs.check.outputs.pinned }}
+      LATEST: ${{ needs.check.outputs.latest }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -e ".[dev]"
+      - run: pip install "$SYMPY"
+      - run: python -m satrefine.tools.refine_compare dump compare/old.json --expect "$PINNED"
+      # replace satassume only (--no-deps keeps the SymPy fork), then add any dependency it gained
+      - run: |
+          pip install --no-deps --force-reinstall "satassume @ git+$SATASSUME_REPO@$LATEST"
+          pip install "satassume @ git+$SATASSUME_REPO@$LATEST"
+      - run: python -m satrefine.tools.refine_compare dump compare/new.json --expect "$LATEST"
+      - run: python -m satrefine.tools.refine_compare diff compare/old.json compare/new.json | tee compare/summary.md
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: compare
+          path: compare/
+          if-no-files-found: ignore
+
+  publish:
+    needs: [check, test, compare]
+    if: ${{ !cancelled() && needs.check.outputs.run == 'true' }}
+    runs-on: ubuntu-latest
+    permissions: {contents: write, pull-requests: write, issues: write}
+    env:
+      # with this secret set, pushes and the PR are made with it, and test.yml runs on the PR
+      GH_TOKEN: ${{ secrets.SATASSUME_BUMP_TOKEN || github.token }}
+      PAT: ${{ secrets.SATASSUME_BUMP_TOKEN != '' }}
+      PINNED: ${{ needs.check.outputs.pinned }}
+      LATEST: ${{ needs.check.outputs.latest }}
+      RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+      # only scheduled runs and manual runs on the default branch write; the others only report
+      WRITE: ${{ github.event_name == 'schedule' || (github.ref_name == github.event.repository.default_branch && !inputs.dry_run) }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.SATASSUME_BUMP_TOKEN || github.token }}
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/download-artifact@v4
+        with:
+          path: results
+      - id: report
+        env:
+          TEST: ${{ needs.test.result }}
+          COMPARE: ${{ needs.compare.result }}
+        run: |
+          failed=()
+          [ "$TEST" = success ] || failed+=("test ($TEST)")
+          [ "$COMPARE" = success ] || failed+=("compare ($COMPARE)")
+          kind="pr"; [ ${#failed[@]} -eq 0 ] || kind="issue"
+          args=(--old "$PINNED" --new "$LATEST" --satrefine "$GITHUB_SHA" --results results
+                --compare results/compare/summary.md --failed "${failed[@]}" --run-url "$RUN_URL")
+          if commits=$(gh api "repos/tilorc-bot/satassume/compare/$PINNED...$LATEST" --jq .ahead_by); then
+            args+=(--commits "$commits")
+          fi
+          [ "$PAT" != true ] || args+=(--pat)
+          python satrefine/tools/satassume_bump.py report "$kind" "${args[@]}" > body.md
+          cat body.md >> "$GITHUB_STEP_SUMMARY"
+          echo "kind=$kind" >> "$GITHUB_OUTPUT"
+      - if: steps.report.outputs.kind == 'pr' && env.WRITE == 'true'
+        run: |
+          short=${LATEST:0:7}
+          python satrefine/tools/satassume_bump.py set "$LATEST"
+          git switch -C "$BRANCH"
+          git add pyproject.toml
+          git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+            commit -q -m "Bump satassume to $short" \
+            -m "satassume main, ${PINNED:0:7}...$short: $SATASSUME_REPO/compare/$PINNED...$LATEST" \
+            -m "Tested and compared by the satassume bump workflow: $RUN_URL"
+          git push -f origin "$BRANCH"
+          number=$(gh pr list --head "$BRANCH" --state open --json number --jq '.[0].number // empty')
+          if [ -n "$number" ]; then
+            gh pr edit "$number" --title "Bump satassume to $short" --body-file body.md
+          elif ! url=$(gh pr create --head "$BRANCH" --title "Bump satassume to $short" --body-file body.md); then
+            echo "::error::Could not open the PR (allow GitHub Actions to create pull requests in Settings > Actions > General, or set SATASSUME_BUMP_TOKEN). Branch $BRANCH is pushed."
+            exit 1
+          else
+            number=${url##*/}
+          fi
+          for issue in $(gh issue list --label "$LABEL" --state open --json number --jq '.[].number'); do
+            gh issue close "$issue" --comment "satassume \`$short\` passes on satrefine \`${GITHUB_SHA:0:7}\`: #$number ($RUN_URL)."
+          done
+      - if: steps.report.outputs.kind == 'issue' && env.WRITE == 'true'
+        run: |
+          title="satassume bump fails at satassume ${LATEST:0:7}"
+          gh label create "$LABEL" --color d73a4a --description "Nightly satassume bump (satassume-bump.yml)" --force
+          number=$(gh issue list --label "$LABEL" --state open --json number --jq '.[0].number // empty')
+          if [ -z "$number" ]; then
+            gh issue create --title "$title" --label "$LABEL" --body-file body.md
+          else
+            before=$(gh issue view "$number" --json title --jq .title)
+            gh issue edit "$number" --title "$title" --body-file body.md
+            # a comment only when the failing commit moves, not every night
+            [ "$before" = "$title" ] || gh issue comment "$number" --body "Now failing at satassume \`${LATEST:0:7}\` on satrefine \`${GITHUB_SHA:0:7}\` ($RUN_URL); the description is updated."
+          fi
