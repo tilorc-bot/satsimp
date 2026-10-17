@@ -11,6 +11,12 @@ key the rows of its ``RULES`` headed by that key, in table order.  The other
 families mix rule and identity tables, and their wiring below makes choices
 of its own: the order of the handlers of a key, the ordering (``measure``)
 and ``opaque`` heads of each identity table, and which tables get ``ZERO``.
+
+``ZERO`` is one row shared by several families: ``F(x) -> F(0)`` when ``x`` is
+provably zero, so ``sin(x)`` with ``x`` zero becomes ``sin(0)``, which SymPy
+evaluates to ``0`` (``cot(0)`` to ``zoo``).  It is put first in the tables of
+every one-argument function of ``trig``, ``hyperbolic`` (:data:`ZERO_FIRST`),
+``complex_parts``, ``inverse`` and ``power_exp_log`` (their wiring below).
 """
 from __future__ import annotations
 
@@ -35,6 +41,9 @@ single term of it is (``sec(x + (2*j + 1)*pi/2)`` is one odd shift, not an even
 shift and then a quarter turn).  Not the default: in ``complex_parts`` it would
 change which conjugate pair of a product is reduced first."""
 
+ZERO_FIRST = frozenset({"trig", "hyperbolic"})
+"""Rules-only families whose tables start with :data:`ZERO`."""
+
 
 @cache
 def family_spec(family: str) -> Family:
@@ -42,8 +51,11 @@ def family_spec(family: str) -> Family:
     family, :data:`WIRED` otherwise); making it completes the module's tables."""
     module = importlib.import_module(family_module_name(family))
     wire = WIRED.get(family)
-    spec = wire(module) if wire else Family.from_rows(module.RULES, assumed=_assumed(module),
-                                                      by_binding=family in BY_BINDING)
+    if wire:
+        spec = wire(module)
+    else:
+        rows = ([ZERO] if family in ZERO_FIRST else []) + module.RULES
+        spec = Family.from_rows(rows, assumed=_assumed(module), by_binding=family in BY_BINDING)
     complete_module(module, spec)
     return spec
 
@@ -61,6 +73,12 @@ def _headed(rows: list, head) -> list:
 # ---- complex_parts --------------------------------------------------------------
 
 def complex_parts(m) -> Family:
+    """The base layer: the branch bookkeeping of the other families (``principal``, the
+    wraps) reduces through ``re``/``im`` of exponentials, logarithms, sums and products and
+    through ``arg`` and ``Abs`` under sign facts, all rows of this family.  Its identities are
+    ordered by ``node_measure``: one fires only when it removes a node of its head, so
+    ``sign(x*y) -> sign(x)*sign(y)`` and ``Abs(x*y) -> Abs(x)*Abs(y)`` happen only when a
+    factor resolves."""
     from .rules.power_exp_log import EXP_FORMS   # not owned by complex_parts (counted in power_exp_log)
     rules = Rules([ZERO] + m.RULES)   # also arg: arg(0) is nan, which is what arg(x) is at x = 0
 
@@ -109,19 +127,22 @@ def inverse(m) -> Family:
     return Family({**{head.__name__: (rules, identity(head))
                       for head in (asin, acos, atan, asinh, atanh, acoth, acsch)},
                    'acosh': rules, 'asech': rules,
-                   'atan2': identity(atan2, opaque=(floor, im, Piecewise))},
+                   'atan2': identity(atan2, opaque=(floor, im, Piecewise))},   # fires when one branch is selected
                   facts=m.FACTS, rules=[ZERO] + m.RULES, ranges=m.RANGES, assumed=_assumed(m))
 
 
 # ---- minmax_deltas --------------------------------------------------------------
 
 def minmax_measure(e, assumptions):
-    """Arguments of the family's heads, then size: a definition fires when it drops one."""
+    """Arguments of the family's heads, then size.  A ``Piecewise`` definition fires
+    when every condition of its right side is decided under the assumptions (no
+    ``Piecewise`` is left) and the result has fewer arguments of ``Max``, ``Min``,
+    ``KroneckerDelta`` and ``Heaviside``."""
     return (sum(len(n.args) for n in e.atoms(Max, Min, KroneckerDelta, Heaviside)), count_ops(e))
 
 
 def minmax_deltas(m) -> Family:
-    def definitions(head):   # no case split (see the module docstring)
+    def definitions(head):   # no case split: on refusals it costs about 5x and derives nothing more
         return Identities(_headed(m.FACTS, head), measure=minmax_measure, opaque=(), splits=False)
 
     return Family({'Max': (Rules(_headed(m.INFINITE, Max)), definitions(Max)),
@@ -143,6 +164,10 @@ def negative_number_base_measure(e, assumptions):
 
 
 def power_exp_log(m) -> Family:
+    """``Pow``'s identity ``b**e == exp(e*log(b))`` keeps ``log`` opaque: it fires when the
+    logarithm collapses and the exponential folds back to a power.  ``exp``'s identity
+    ``exp(a + b) == exp(a)*exp(b)`` is ordered by the number of ``exp`` nodes, so it fires
+    only when a factor evaluates away."""
     rules, zero = Rules(m.RULES), Rules([ZERO])
     return Family({'log': (zero, Identities(m.IDENTITIES), Rules(m.LOG_RULES)),   # LOG_RULES after the identities
                    'Pow': (rules,
