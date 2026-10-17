@@ -17,8 +17,8 @@ from sympy import (Adjoint, Determinant, HadamardProduct, I, Identity, Inverse, 
                    cosh, sinh, sqrt, symbols, zeros)
 from sympy.matrices.expressions.matexpr import MatrixElement
 
-from satrefine import refine
-from satrefine.testing.harness import assert_refinement_valid
+from satsimp import refine
+from satsimp.testing.harness import assert_refinement_valid
 
 X = MatrixSymbol('X', 2, 2)
 Y = MatrixSymbol('Y', 2, 2)
@@ -232,5 +232,5 @@ def test_symmetric_element_symbolic_order():
 
 
 def test_table_size():
-    from satrefine.identities.compat import matrices as mod
+    from satsimp.methods.refine.identities.compat import matrices as mod
     assert len(mod.RULES) == 30

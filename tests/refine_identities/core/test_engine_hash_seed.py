@@ -28,9 +28,9 @@ import sys
 
 SCRIPT = """
 import os
-os.environ["SATREFINE_HANDLERS"] = "handlers_identities"
+os.environ["SATSIMP_HANDLERS"] = "handlers_identities"
 from sympy import Q, Symbol, log
-from satrefine import refine
+from satsimp import refine
 x = Symbol('x')
 print(refine(log(1/x), Q.zero(x)))
 """

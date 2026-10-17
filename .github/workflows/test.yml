@@ -13,7 +13,7 @@ jobs:
         with:
           python-version: ${{ matrix.python }}
       - run: pip install -e ".[dev]"
-      # SymPy at the commit the refine gates use (satrefine/tools/refine_gates.sh): the refine
+      # SymPy at the commit the refine gates use (satsimp/tools/refine_gates.sh): the refine
       # tests need its assumptions/refine changes, and PyPI's SymPy fails some of them
       - run: pip install "sympy @ git+https://github.com/tilorc-bot/sympy@6379c4da69"
       # one run per tree: the trees share test module basenames; tests/refine_identities/needs

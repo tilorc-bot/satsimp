@@ -14,9 +14,9 @@ from sympy import (
 )
 from sympy.matrices.expressions.matexpr import MatrixElement
 
-from satrefine.identities.compat import upstream as _upstream
-from satrefine.identities.compat.upstream import refine
-from satrefine.reference.v3 import matrices
+from satsimp.methods.refine.identities.compat import upstream as _upstream
+from satsimp.methods.refine.identities.compat.upstream import refine
+from satsimp.methods.refine.reference.v3 import matrices
 
 X = MatrixSymbol('X', 2, 2)
 Y = MatrixSymbol('Y', 2, 2)

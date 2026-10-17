@@ -1,15 +1,19 @@
-# satrefine: refine from identities
+# refine from identities
 
-How satrefine's default refine (`satrefine/identities/`, selected as
-`handlers_identities`) works and why. What satrefine is for, the `ask`
+How satsimp's refine method (`satsimp.refine`) works and why: its default
+handler package (`satsimp/methods/refine/identities/`, selected as
+`handlers_identities`) and the shared engine it runs on (`satsimp/engine/`).
+satsimp was called satrefine until the split into an engine and methods
+([architecture.md](architecture.md)); paths quoted with an old commit are the
+`satrefine/` paths of their time. What refine is for, the `ask`
 backends and the tools are in the README's
-[satrefine section](../README.md#satrefine-the-refine-layer-as-a-yardstick);
+[refine section](../README.md#refine-the-refine-layer-as-a-yardstick);
 verification, fuzzing, gates, battery, scoreboard, the bug classes fixed and
 the speed history in [refine-testing.md](refine-testing.md).
 
 SymPy's `refine(expr, assumptions)` returns an expression equal to `expr`
 wherever the assumptions hold. Its handlers are procedures, and every rewrite
-on a branch cut is a case analysis done by hand. satrefine keeps SymPy's
+on a branch cut is a case analysis done by hand. satsimp's refine keeps SymPy's
 dispatcher and sends every predicate question through one seam, its `ask`, so
 the handlers run against satassume, SymPy's `ask` or both. The identities
 package writes the handlers as data: identities that hold everywhere, with the
@@ -20,13 +24,13 @@ cases; the conditional rules are generated and verified offline.
 ## Three implementations
 
 Before the identities package, the same 56 keys of `handlers_dict` were
-implemented three times, each selected with `SATREFINE_HANDLERS`:
+implemented three times, each selected with `SATREFINE_HANDLERS` (now `SATSIMP_HANDLERS`):
 
 | Package | What it was | Now |
 |---|---|---|
 | `handlers` | the `reasoning` project's layer (`feature/refine` at `12c3845`): one self-registering module per key, 33 modules, 469 tests | removed |
 | `handlers_v2` | a blind rewrite by one agent, 18 modules, no adversarial pass, 161 tests | removed |
-| `handlers_v3` | a blind rewrite by a parallel team, one module per family plus `_common.py`; an adversarial verifier per family found and fixed 12 defects; 1,005 tests | the reference, `satrefine/reference/v3/`, still selected as `handlers_v3` (alias `satrefine/handlers_v3.py`); suite `tests/refine_v3/` |
+| `handlers_v3` | a blind rewrite by a parallel team, one module per family plus `_common.py`; an adversarial verifier per family found and fixed 12 defects; 1,005 tests | the reference, `satsimp/methods/refine/reference/v3/`, still selected as `handlers_v3` (alias `satsimp/methods/refine/handlers_v3.py`); suite `tests/refine_v3/` |
 
 `git checkout 411038c` runs `handlers` and `handlers_v2` with their tests
 (deleted, not archived: an archived copy would stop running).
@@ -41,7 +45,7 @@ package with zero known defects after an adversarial pass, became the
 reference: the battery is recorded from its suite, the differential compares
 against it.
 
-**Why identities replaced v3 as the default** (`satrefine.DEFAULT_HANDLERS`).
+**Why identities replaced v3 as the default** (`satsimp.methods.refine.DEFAULT_HANDLERS`).
 Every conditional rule of v3's `log` handler (83 lines, 8 rules) specializes
 two facts about the logarithm and two exponential forms, and likewise for the
 other branch-cut families. As identities, a rule is a theorem on the page and
@@ -52,54 +56,66 @@ costs rows, not procedure. At `2fd72b8` the package gave 0 wrong and 0 crash
 on the battery and matched 1,073 of v3's 1,086 rewrites, in 483 family code
 lines against 1,595, though its engine (1,132 lines) made the totals about equal.
 By `905be5d` every remaining difference from v3 was reviewed and accepted
-(`satrefine/tools/lib/accepted.py`). At `075d1f8`, counted by
-`satrefine/tools/lib/sizes.py`: families 685 lines, engine 1,855 (online
+(`satsimp/tools/lib/accepted.py`). At `075d1f8`, counted by
+`satsimp/tools/lib/sizes.py`: families 685 lines, engine 1,855 (online
 1,497, offline 358), v3 1,625.
 
 ## Layout
 
 ```
-satrefine/
-  identities/      online: runs on every refine call
-    core/            driver, guard, prove, match, rewrite, split, measure, spec, hooks
-    rules/           the families as rows; _tables (table API), _wraps, _simple
-    wiring.py        which handlers serve which key: each family's spec
-    generated/       checked-in rule tables, written offline
-    compat/          expected to change: backend routing, SymPy workarounds,
-                     the matrix family and matcher hook, the vendored dispatcher
-    config.py        SATREFINE_HANDLERS, SATREFINE_IDENTITIES, SATREFINE_STRICT_LOOPS
+satsimp/
+  engine/          shared, online: runs on every call of every method
+                     driver, guard, prove, match, rewrite, split, measure, spec, hooks,
+                     backend (ask routing), config (SATSIMP_IDENTITIES, SATSIMP_STRICT_LOOPS)
+  methods/refine/  the refine method
+    __init__.py      refine, handlers_dict, the refine_* handlers; loads the handler package
+    config.py        SATSIMP_HANDLERS
+    identities/      online: refine's table package (handlers_identities)
+      rules/           the families as rows; _tables (table API), _wraps, _simple
+      wiring.py        which handlers serve which key: each family's spec
+      generated/       checked-in rule tables, written offline
+      compat/          expected to change: SymPy workarounds, the matrix family
+                       and matcher hook, the vendored dispatcher
+    reference/v3/    the reference implementation (measuring only)
   build/           offline: specialization, stages, verification, rendering, specs
   tools/           offline: scoreboard, differential, fuzz, oracle, ablation, gates
   testing/         offline: test harness
-  reference/v3/    the reference implementation (measuring only)
 ```
+
+Before the split, `engine/` was `identities/core/` plus `compat/backend.py` and
+the engine half of `identities/config.py`, and everything under
+`methods/refine/` was directly under `satrefine/`.
 
 `compat/upstream.py` is SymPy's `refine.py` vendored behaviour-identical;
 all 14 of its handler keys are overridden. `load()` in
-`satrefine/identities/__init__.py` (called by `satrefine/handlers_identities/`)
-replaces `satrefine.refine` with the driver, installs the `_simple` fallbacks,
+`satsimp/methods/refine/identities/__init__.py` (called by
+`satsimp/methods/refine/handlers_identities/`) replaces refine's `refine`
+(`satsimp.methods.refine.refine`, which `satsimp.refine` is) with the driver,
+installs the `_simple` fallbacks,
 imports the generated tables and registers every family's spec
 (`wiring.family_spec`) and ranges.
 Layout rules, checked by `tests/refine_identities/test_import_direction.py` and
-`tests/refine_identities/rules/test_family_specs.py`:
+`tests/refine_identities/rules/test_family_specs.py` (the rules between
+methods are in [architecture.md](architecture.md#rules)):
 
-- `build/`, `tools/` and `testing/` import `identities/`, never the reverse,
-  and `identities/` never imports `reference/`; refine runs in a subprocess
-  where the offline packages raise on import. `pyproject.toml` leaves them
-  and `reference` out of the distribution.
-- `core/` names no specific SymPy function or matrix type and imports neither
-  `rules/` nor `compat/`. Particular heads are roles in `core/hooks.py`
-  (`opaque`: `floor`, `im`, `arg`; `conditional`: `Piecewise`; `modulus`:
-  `Abs`; `step`: `floor`), set by `rules/_simple.install`; the dispatcher, the
-  matrix matcher, the SymPy workarounds and the generation observer plug in
-  there too.
+- `build/`, `tools/` and `testing/` import the runtime (`engine/`,
+  `methods/`), never the reverse, and the runtime never imports
+  `reference/`; refine runs in a subprocess where the offline packages
+  raise on import. `pyproject.toml` leaves them and `reference` out of the
+  distribution.
+- `engine/` names no specific SymPy function or matrix type (the `ask`
+  backend excepted) and imports no method. Particular heads are roles in
+  `engine/hooks.py` (`opaque`: `floor`, `im`, `arg`; `conditional`:
+  `Piecewise`; `modulus`: `Abs`; `step`: `floor`), set by
+  `rules/_simple.install`; the dispatcher, the matrix matcher, the SymPy
+  workarounds and the generation observer plug in there too.
 - Importing a family registers nothing: import-time registration once let one
   package's tests replace another's handlers.
 
 ## Families as data
 
 A family module (`rules/*.py`, `compat/matrices.py`) states rows only: its
-symbols, named tables and, if it needs one, `ASSUMED`. Its `Family` (`core/spec.py`), which
+symbols, named tables and, if it needs one, `ASSUMED`. Its `Family` (`engine/spec.py`), which
 handlers serve which `handlers_dict` key, is made in `identities/wiring.py`:
 for a family of rule rows only (trig, hyperbolic, combinatorial, matrices)
 `Family.from_rows` derives it from `RULES`, each key getting the rows of its
@@ -160,7 +176,7 @@ the whole coefficient of `pi/2` tried under both parities before a single term
 of it (`sec(x + (2*n + 1)*pi/2)` is one odd shift, not an even shift and a
 quarter turn).
 
-## Proving conditions (`core/prove.py`)
+## Proving conditions (`engine/prove.py`)
 
 `provable(cond, assumptions)` goes connective by connective: an `And` needs
 every part (relation atoms last, they are the expensive ones), an `Or` one
@@ -213,7 +229,7 @@ satassume does not read Float bounds. That answer rests on the float lying
 
 ## Matching and rewriting
 
-**Matching** (`core/match.py`; its docstring lists the pattern forms) is
+**Matching** (`engine/match.py`; its docstring lists the pattern forms) is
 structural over plain pattern symbols with linear special forms (one factor
 against the rest, the coefficient of `pi/2`, `exponent('k')`, `part`, a
 generic head `F`), not a commutative search or `sympy.unify`. Matrix
@@ -228,7 +244,7 @@ domain is provable and the substituted right side, refined with the handler
 switched off, holds no `Piecewise` the input lacked (an undecided definition),
 no opaque head (`floor`, `im`, `arg`) after the endpoint and case splits (the
 bookkeeping collapsed), and is smaller under the table's measure
-(`core/measure.py`: `default_measure`, `node_measure`, `count_measure`).
+(`engine/measure.py`: `default_measure`, `node_measure`, `count_measure`).
 
 The measure is what makes identities terminate: without it the definition
 `log(x) = log(Abs(x)) + I*arg(x)` and the product form undo each other on
@@ -236,7 +252,7 @@ The measure is what makes identities terminate: without it the definition
 is refined stops `log(Abs(b))` from reproducing itself; the candidate's own
 nodes are rewritten after acceptance.
 
-## Case splits (`core/split.py`)
+## Case splits (`engine/split.py`)
 
 When the bookkeeping stays opaque because a symbol under it has known reality
 but unknown sign, `case_split` refines the candidate under each sign; agreeing
@@ -252,7 +268,7 @@ odd `2*a/b` does not fire when the signs of both `a` and `b` are unknown.
 
 ## The driver and the termination guard
 
-`core/driver.py` is the vendored dispatcher with these changes:
+`engine/driver.py` is the vendored dispatcher with these changes:
 
 - **Re-refine after auto-evaluation.** SymPy's `refine` dispatches on a
   rebuilt node without refining the children its constructor just created
@@ -262,7 +278,7 @@ odd `2*a/b` does not fire when the signs of both `a` and `b` are unknown.
   mode and engine state (handlers switched off, a split exploring), so a
   cached result is what recomputing would give.
 - **Generated table first**, then the live handler, then a `_simple` fallback.
-- **Termination** (`core/guard.py`, argued in its docstring): at most
+- **Termination** (`engine/guard.py`, argued in its docstring): at most
   `MAX_DEPTH = 100` nested refinements; no node re-entering its own
   refinement; at most `MAX_FIRINGS = 500` steps per rewrite chain, and
   backstops of 50,000 firings per call and 200,000 with explorations. The cap
@@ -270,7 +286,7 @@ odd `2*a/b` does not fire when the signs of both `a` and `b` are unknown.
   is not taken for a loop. Refine terminates whatever `ask` answers. A tripped
   guard returns the input (always correct; a partial result is only as good
   as the rows that looped) and logs to `loop_events`, or raises
-  `RefineLoopError` under `SATREFINE_STRICT_LOOPS=1` (tests and gates).
+  `RefineLoopError` under `SATSIMP_STRICT_LOOPS=1` (tests and gates).
 
 **Inconsistent assumptions.** When `ask` raises "inconsistent assumptions",
 the top-level call returns its input: every result is correct then, and
@@ -281,7 +297,7 @@ a case split or `refine_piecewise` drops an inconsistent branch.
 ## Generated tables
 
 `generated/<family>.py` are plain rule tables written by
-`python -m satrefine.tools.refine_specialize --write`. `build/specialize.py`
+`python -m satsimp.tools.refine_specialize --write`. `build/specialize.py`
 runs the live engine on each identity row's left side under per-variable
 profiles (`CATALOG`: positive, negative, real, imaginary, even, odd, ...; more
 per family in `build/specs.py`, including literals such as `e = -1`), keeps
@@ -301,11 +317,11 @@ when a row changes. Trig and hyperbolic have no identity rows; `minmax_deltas`
 is not generated (`specs.NOT_GENERATED`), its definitions decide in
 milliseconds. At `075d1f8` the tables hold 37 (complex_parts), 11
 (integer_funcs), 18 (power_exp_log) and 7 (inverse) rules;
-`SATREFINE_IDENTITIES=live` ignores them. Meant as a fast path, they did not
+`SATSIMP_IDENTITIES=live` ignores them. Meant as a fast path, they did not
 show as one in #13's refactor (against `2ba1873`, pinned): the full battery
 run took about 82 s either way.
 
-## The `ask` backend (`compat/backend.py`)
+## The `ask` backend (`engine/backend.py`)
 
 The README describes the four backends. Under `combined`, `route` keeps
 satassume's answer, `None` included, except:
@@ -349,7 +365,7 @@ opaque Boolean atom) as satassume's default; `route` must then keep the
 | `acot(-z)`, `acoth(-z)` evaluate to `-acot(z)`, `-acoth(z)`, wrong at `z = 0` (B8) | `compat/sympy_fixes.rebuild` keeps a rebuilt `acot`/`acoth` of a possibly zero argument unevaluated; reported as sympy/sympy#30588 (closed upstream) |
 | `Q.extended_real(sqrt(z))` True for negative `z` (the `Pow` handler is the closure of the extended reals) | backend guard: a True is kept only for an integer exponent, or an extended nonnegative base and a real exponent; a neighbouring case is sympy/sympy#30619 |
 | `Q.nonzero` ("real and nonzero") False for `Abs(x)`, `x**2`, `x*y` with imaginary `x`, so they are "zero" and `c**2*X` the zero matrix | backend guard: a False from those three handlers is replaced by an answer checked under SymPy's definition |
-| `Pow._eval_refine`, `exp._eval_refine` call SymPy's `ask` directly | satrefine's copies (`sympy_fixes.EVAL_REFINE`) go through the backend and the memo |
+| `Pow._eval_refine`, `exp._eval_refine` call SymPy's `ask` directly | refine's copies (`sympy_fixes.EVAL_REFINE`) go through the backend and the memo |
 | `refine_Pow`: wrong for `sqrt(x**2)` with imaginary `x`, `sqrt(x**3)` with real `x`, `(x**3)**(1/3)`; crashes on `(-1)**(n + 1/2)` | replaced by `power_exp_log`'s rows |
 | the floor handler splits off integer terms only from an `Add` | `principal` writes its floor argument as `1/2 - im(w)/(2*pi)` |
 | `Q.eq(i, j)` True for `i = -oo`, `j <= 0`; `Q.eq` raising "inconsistent" on consistent facts; `Q.unitary` from `Q.orthogonal` | no relation forms at infinity; a raising `ask` is undecided; strict xfails |
@@ -381,7 +397,7 @@ opaque Boolean atom) as satassume's default; `route` must then keep the
 - **Explicit state and renames** (steps 8-9 of #13; 1-7 are done): a
   `Refiner` object (handlers, backend, mode, limits; environment read once)
   instead of the process-global `handlers_dict`, backend, mode, strict flag
-  and split state; renames (`handlers_identities` to e.g. `satrefine.rules`,
+  and split state; renames (`handlers_identities` to e.g. `satsimp.methods.refine.rules`,
   live/generated to direct/tables, `_simple`), most useful for upstreaming.
 - **Engine size.** #13's target was below the 1,434 counted lines of
   `f83f195`; it ended at 1,793 (`905be5d`), 1,855 at `075d1f8`: the
@@ -390,7 +406,7 @@ opaque Boolean atom) as satassume's default; `route` must then keep the
   mode (about 30 online and 358 offline lines), case splits (about 160), the
   matrix matcher (83), the `_eval_refine` copies (about 40).
 - **Track C** and the integer fallback (#62): wait for satassume (#64), or
-  drop unread relations in `compat/backend.py` (sound, a few lines).
+  drop unread relations in `engine/backend.py` (sound, a few lines).
 - **Merging into `main`**: `main`'s CI runs `pytest tests` in one process;
   refine's test trees need a process each.
 

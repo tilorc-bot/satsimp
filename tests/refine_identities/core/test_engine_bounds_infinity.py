@@ -15,7 +15,7 @@ from __future__ import annotations
 
 from sympy import Q, oo, pi, symbols
 
-from satrefine.identities.core.prove import provable
+from satsimp.engine.prove import provable
 
 x = symbols("x")
 

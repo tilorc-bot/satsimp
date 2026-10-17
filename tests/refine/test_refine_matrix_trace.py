@@ -6,8 +6,8 @@ from sympy.assumptions import Q
 from sympy.core import S
 from sympy.matrices.expressions import MatrixSymbol, Trace
 
-from satrefine import refine
-from satrefine.testing.harness import (
+from satsimp import refine
+from satsimp.testing.harness import (
     recording_ask,
     reference_ask,
     stub_ask,

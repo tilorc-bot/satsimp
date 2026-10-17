@@ -19,9 +19,9 @@ import pytest
 from sympy import Abs, AccumBounds, MatrixSymbol, Q, Symbol, asin, oo, pi, sin, sqrt
 from sympy.assumptions.assume import Predicate
 
-from satrefine import refine
-from satrefine.identities.compat import backend
-from satrefine.identities.compat.backend import route
+from satsimp import refine
+from satsimp.engine import backend
+from satsimp.engine.backend import route
 
 x, y = Symbol('x'), Symbol('y')
 X, Y = MatrixSymbol('X', 2, 2), MatrixSymbol('Y', 2, 2)

@@ -22,7 +22,7 @@ from __future__ import annotations
 import pytest
 from sympy import MatrixSymbol, Q, S, Symbol
 
-from satrefine import refine
+from satsimp import refine
 
 x = MatrixSymbol("x", 3, 3)
 A = MatrixSymbol("A", 3, 3)

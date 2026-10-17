@@ -4,7 +4,7 @@ SymPy's matrix fact base states ``Implies(Q.orthogonal(x),
 Q.positive_definite(x))``, false even for real matrices: ``-eye(2)`` is
 orthogonal and not positive definite.  While the combined backend asks SymPy,
 the fact base has ``Q.orthogonal -> Q.invertible`` instead
-(``satrefine/identities/compat/backend.py``).
+(``satsimp/engine/backend.py``).
 """
 from __future__ import annotations
 
@@ -12,8 +12,8 @@ import pytest
 from sympy import MatrixSymbol, Q, eye
 from sympy.assumptions.ask import ask as sympy_ask
 
-from satrefine.identities.compat import backend
-from satrefine.identities.compat.backend import ask
+from satsimp.engine import backend
+from satsimp.engine.backend import ask
 
 X = MatrixSymbol('X', 2, 2)
 

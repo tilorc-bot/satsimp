@@ -7,8 +7,8 @@ from sympy.core import S
 from sympy.core.numbers import zoo
 from sympy.functions.elementary.trigonometric import cot, tan
 
-from satrefine import refine
-from satrefine.testing.harness import (
+from satsimp import refine
+from satsimp.testing.harness import (
     assert_refinement_valid,
     stub_ask,
     use_ask,

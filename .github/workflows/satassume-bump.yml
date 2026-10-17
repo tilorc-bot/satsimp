@@ -6,7 +6,7 @@ name: satassume bump
 # pin is satassume main, a bump PR or tracking issue still open is closed (tidy).
 # The branch satassume-bump belongs to this workflow: every passing run force-pushes it, so do
 # not push to it; make a fix the bump needs in a separate PR.
-# The logic is in satrefine/tools/satassume_bump.py and satrefine/tools/refine_compare.py.
+# The logic is in satsimp/tools/satassume_bump.py and satsimp/tools/refine_compare.py.
 on:
   schedule:
     - cron: "17 4 * * *"
@@ -52,7 +52,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           FORCE: ${{ inputs.force || false }}
         run: |
-          pinned=$(python satrefine/tools/satassume_bump.py pin)
+          pinned=$(python satsimp/tools/satassume_bump.py pin)
           # "latest" is satassume main's commit, so only a git commit pin can be bumped; a PyPI pin
           # (satassume==VERSION, which satassume_bump.py reads and rewrites) would need the latest
           # release resolved here instead (PyPI's JSON API), or it would be set to a commit hash
@@ -75,8 +75,8 @@ jobs:
             # an open PR or issue whose marker names these commits: a run would only repeat it
             want="$GITHUB_SHA $latest"
             for body in "$pr" "$issue"; do
-              if [ "$(printf '%s' "$body" | python satrefine/tools/satassume_bump.py marker)" = "$want" ]; then
-                run=false; echo "The open bump PR or issue already covers satrefine ${GITHUB_SHA:0:7}, satassume ${latest:0:7}."
+              if [ "$(printf '%s' "$body" | python satsimp/tools/satassume_bump.py marker)" = "$want" ]; then
+                run=false; echo "The open bump PR or issue already covers satsimp ${GITHUB_SHA:0:7}, satassume ${latest:0:7}."
               fi
             done
           fi
@@ -94,7 +94,7 @@ jobs:
       LATEST: ${{ needs.check.outputs.latest }}
     steps:
       - run: |
-          note="The pin in pyproject.toml is satassume main (\`${LATEST:0:7}\`) on satrefine \`${GITHUB_SHA:0:7}\`: nothing left to bump."
+          note="The pin in pyproject.toml is satassume main (\`${LATEST:0:7}\`) on satsimp \`${GITHUB_SHA:0:7}\`: nothing left to bump."
           for pr in $(gh pr list --head "$BRANCH" --state open --json number,isCrossRepository --jq '.[] | select(.isCrossRepository | not) | .number'); do
             gh pr close "$pr" --comment "$note"
           done
@@ -121,7 +121,7 @@ jobs:
         with:
           python-version: ${{ matrix.python }}
       # test.yml's steps on the tree the bump PR would have, with junit files and logs for the report
-      - run: python satrefine/tools/satassume_bump.py set "$LATEST"
+      - run: python satsimp/tools/satassume_bump.py set "$LATEST"
       - run: pip install -e ".[dev]"
       - run: pip install "$SYMPY"
       - run: mkdir -p results
@@ -154,13 +154,13 @@ jobs:
           python-version: "3.12"
       - run: pip install -e ".[dev]"
       - run: pip install "$SYMPY"
-      - run: python -m satrefine.tools.refine_compare dump compare/old.json --expect "$PINNED"
+      - run: python -m satsimp.tools.refine_compare dump compare/old.json --expect "$PINNED"
       # replace satassume only (--no-deps keeps the SymPy fork), then add any dependency it gained
       - run: |
           pip install --no-deps --force-reinstall "satassume @ git+$SATASSUME_REPO@$LATEST"
           pip install "satassume @ git+$SATASSUME_REPO@$LATEST"
-      - run: python -m satrefine.tools.refine_compare dump compare/new.json --expect "$LATEST"
-      - run: python -m satrefine.tools.refine_compare diff compare/old.json compare/new.json | tee compare/summary.md
+      - run: python -m satsimp.tools.refine_compare dump compare/new.json --expect "$LATEST"
+      - run: python -m satsimp.tools.refine_compare diff compare/old.json compare/new.json | tee compare/summary.md
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -201,19 +201,19 @@ jobs:
           [ "$TEST" = success ] || failed+=("test ($TEST)")
           [ "$COMPARE" = success ] || failed+=("compare ($COMPARE)")
           kind="pr"; [ ${#failed[@]} -eq 0 ] || kind="issue"
-          args=(--old "$PINNED" --new "$LATEST" --satrefine "$GITHUB_SHA" --results results
+          args=(--old "$PINNED" --new "$LATEST" --satsimp "$GITHUB_SHA" --results results
                 --compare results/compare/summary.md --failed "${failed[@]}" --run-url "$RUN_URL")
           if commits=$(gh api "repos/${SATASSUME_REPO#https://github.com/}/compare/$PINNED...$LATEST" --jq .ahead_by); then
             args+=(--commits "$commits")
           fi
           [ "$PAT" != true ] || args+=(--pat)
-          python satrefine/tools/satassume_bump.py report "$kind" "${args[@]}" > body.md
+          python satsimp/tools/satassume_bump.py report "$kind" "${args[@]}" > body.md
           cat body.md >> "$GITHUB_STEP_SUMMARY"
           echo "kind=$kind" >> "$GITHUB_OUTPUT"
       - if: steps.report.outputs.kind == 'pr' && env.WRITE == 'true'
         run: |
           short=${LATEST:0:7}
-          python satrefine/tools/satassume_bump.py set "$LATEST"
+          python satsimp/tools/satassume_bump.py set "$LATEST"
           git switch -C "$BRANCH"
           git add pyproject.toml
           git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
@@ -231,7 +231,7 @@ jobs:
             number=${url##*/}
           fi
           for issue in $(gh issue list --label "$LABEL" --state open --json number --jq '.[].number'); do
-            gh issue close "$issue" --comment "satassume \`$short\` passes on satrefine \`${GITHUB_SHA:0:7}\`: #$number ($RUN_URL)."
+            gh issue close "$issue" --comment "satassume \`$short\` passes on satsimp \`${GITHUB_SHA:0:7}\`: #$number ($RUN_URL)."
           done
       - if: steps.report.outputs.kind == 'issue' && env.WRITE == 'true'
         run: |
@@ -244,5 +244,5 @@ jobs:
             before=$(gh issue view "$number" --json title --jq .title)
             gh issue edit "$number" --title "$title" --body-file body.md
             # a comment only when the failing commit moves, not every night
-            [ "$before" = "$title" ] || gh issue comment "$number" --body "Now failing at satassume \`${LATEST:0:7}\` on satrefine \`${GITHUB_SHA:0:7}\` ($RUN_URL); the description is updated."
+            [ "$before" = "$title" ] || gh issue comment "$number" --body "Now failing at satassume \`${LATEST:0:7}\` on satsimp \`${GITHUB_SHA:0:7}\` ($RUN_URL); the description is updated."
           fi

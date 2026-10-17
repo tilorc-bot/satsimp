@@ -1,4 +1,4 @@
-"""Self-tests for :mod:`satrefine.harness`."""
+"""Self-tests for :mod:`satsimp.harness`."""
 from __future__ import annotations
 
 
@@ -8,7 +8,7 @@ from sympy.assumptions.ask import ask as sympy_ask
 from sympy.abc import x
 from sympy.functions.elementary.complexes import Abs
 
-from satrefine.testing.harness import (
+from satsimp.testing.harness import (
     assert_refines_like_sympy,
     assert_refinement_valid,
     recording_ask,
@@ -20,7 +20,7 @@ from satrefine.testing.harness import (
 
 
 def test_reference_ask_restores_state() -> None:
-    import satrefine.identities.compat.upstream as upstream
+    import satsimp.methods.refine.identities.compat.upstream as upstream
 
     original = upstream.ask
     with reference_ask():
@@ -80,7 +80,7 @@ def test_recording_ask_logs_with_stub() -> None:
 
 
 def test_use_ask_patches_module_attribute() -> None:
-    import satrefine.identities.compat.upstream as upstream
+    import satsimp.methods.refine.identities.compat.upstream as upstream
 
     fake = stub_ask({})
     with use_ask(fake):

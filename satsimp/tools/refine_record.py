@@ -1,0 +1,27 @@
+"""Record the ``ask`` query stream that satsimp issues over its battery.
+
+    PYTHONHASHSEED=0 SATSIMP_HANDLERS=handlers_identities SATSIMP_IDENTITIES=generated \
+      PYTHONPATH=.:/path/to/sympy python -m satsimp.tools.refine_record stream.pkl
+
+Needs a checkout that has ``satsimp`` and ``tests/refine_identities``
+(the ``refine-identities`` branch); the pickle it writes is replayed by
+``satsimp/tools/refine_replay.py`` against any satassume checkout.
+"""
+import argparse, pickle, time
+_ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
+_ap.add_argument("out", help="the pickle to write")
+_args = _ap.parse_args()
+import satsimp, satsimp.methods.refine, satsimp.engine.backend as B
+from tests.refine_identities.battery_v3 import BATTERY
+B.set_backend("satassume")
+orig = B._satassume_ask
+stream = []
+def rec(p, a=True):
+    r = orig(p, a); stream.append((p, a, r)); return r
+B._IMPLEMENTATIONS["satassume"] = rec
+t0 = time.perf_counter()
+for expr, assum, exp, src in BATTERY:
+    try: satsimp.refine(expr, assum)
+    except Exception: pass
+print(f"refine loop {time.perf_counter()-t0:.1f}s, {len(stream)} queries")
+with open(_args.out, "wb") as f: pickle.dump(stream, f)

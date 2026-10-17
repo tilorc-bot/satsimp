@@ -7,7 +7,7 @@ from sympy.calculus.accumulationbounds import AccumBounds
 
 from _rows import check_relation, check_valid, ids
 
-from satrefine import refine
+from satsimp import refine
 
 x, k, n = symbols("x k n")
 ODD, EVEN, INT = Q.odd(k), Q.even(k), Q.integer(k)

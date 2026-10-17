@@ -13,8 +13,8 @@ from sympy.core import S
 from sympy.functions.elementary.integers import ceiling, floor
 from sympy.functions.elementary.miscellaneous import Rem
 
-from satrefine import refine
-from satrefine.testing.harness import (
+from satsimp import refine
+from satsimp.testing.harness import (
     assert_refinement_valid,
     stub_ask,
     use_ask,

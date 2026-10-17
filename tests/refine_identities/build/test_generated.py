@@ -9,12 +9,12 @@ from pathlib import Path
 import pytest
 from sympy import I, Q, log, pi, srepr, symbols, sympify
 
-from satrefine.build import stages as _stages
-from satrefine.identities.config import MODE_ENV_VAR
-from satrefine.identities.core import driver as _dispatch
-from satrefine.identities.core.prove import ByCases
-from satrefine.build.render import generated_path
-from satrefine.build.specialize import family_modules
+from satsimp.build import stages as _stages
+from satsimp.engine.config import MODE_ENV_VAR
+from satsimp.engine import driver as _dispatch
+from satsimp.engine.prove import ByCases
+from satsimp.build.render import generated_path
+from satsimp.build.specialize import family_modules
 
 x = symbols("x")
 
@@ -37,8 +37,8 @@ GENERATED_GAPS: dict = {}   # rows where the live engine fires and generated mod
 def test_generated_table_covers_the_live_rows(monkeypatch):
     """Every row the live engine fires on, generated mode fires on with a
     numerically valid result, except the listed gaps."""
-    from satrefine import refine
-    from satrefine.testing.harness import assert_refinement_valid
+    from satsimp import refine
+    from satsimp.testing.harness import assert_refinement_valid
     IDS, ROWS = _power_exp_log_rows()
     misses, unexpected = [], []
     for (expr, assumptions, _team, _rel), rid in zip(ROWS, IDS):
@@ -55,7 +55,7 @@ def test_generated_table_covers_the_live_rows(monkeypatch):
 
 
 def test_generated_tables_are_registered_and_preferred(monkeypatch):
-    from satrefine import refine
+    from satsimp import refine
     assert "log" in _dispatch.generated_handlers
     monkeypatch.setenv(MODE_ENV_VAR, "generated")
     assert refine(log(x), Q.negative(x)) == log(-x) + I*pi
@@ -69,7 +69,7 @@ def test_generated_tables_are_registered_and_preferred(monkeypatch):
 SMOKE_FAMILY = "inverse"
 """The one family whose fixpoint check runs by default (the cheapest to
 regenerate); the others are marked ``full`` and run when
-``SATREFINE_FULL_TESTS=1`` (see ``conftest.py``; the gates run them)."""
+``SATSIMP_FULL_TESTS=1`` (see ``conftest.py``; the gates run them)."""
 
 
 def _family_param(module):
@@ -87,8 +87,8 @@ def test_generated_module_is_up_to_date(module, monkeypatch):
     monkeypatch.setenv(MODE_ENV_VAR, "live")
     family = module.__name__.rsplit(".", 1)[-1]
     path = generated_path(family)
-    assert path.exists(), f"run satrefine/tools/refine_specialize.py --write --family {family}"
-    committed = importlib.import_module(f"satrefine.identities.generated.{family}")
+    assert path.exists(), f"run satsimp/tools/refine_specialize.py --write --family {family}"
+    committed = importlib.import_module(f"satsimp.methods.refine.identities.generated.{family}")
     # the fixpoint property: regenerating the family against the committed tables of
     # the others (its own keys live) gives its committed table (see _stages)
     rules, _keys, _verdicts = _stages.generate_one(module)
@@ -96,7 +96,7 @@ def test_generated_module_is_up_to_date(module, monkeypatch):
     # some generated left sides auto-evaluate (Abs(exp(z)) -> exp(re(z))); a hypothesis
     # marked by cases (by_cases) reads back as one.
     loaded = {tuple(sympify(srepr(part), locals={"ByCases": ByCases}) for part in rule) for rule in rules}
-    assert set(committed.RULES) == loaded, "regenerate with satrefine/tools/refine_specialize.py --write"
+    assert set(committed.RULES) == loaded, "regenerate with satsimp/tools/refine_specialize.py --write"
 
 
 def test_stage_manifest_covers_every_generating_family():

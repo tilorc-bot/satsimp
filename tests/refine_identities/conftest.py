@@ -1,11 +1,13 @@
 """Fixtures for the ``handlers_identities`` tests.
 
-The layout follows the package: ``core/``, ``rules/``, ``compat/``, ``build/``
-and ``tools/`` test the modules of the same name; the per-bug regressions are
+The layout follows the package: ``core/`` tests the engine (``satsimp/engine``,
+``core/`` before the split into engine and methods), ``rules/`` and ``compat/``
+refine's modules of the same name (``compat/`` also the ``ask`` backend,
+``satsimp/engine/backend.py``), ``build/`` and ``tools/`` the offline packages; the per-bug regressions are
 rows of ``regressions.py``; ``needs/`` holds open requests.
 
-Selects the package before ``satrefine`` is imported so a plain
-``pytest tests/refine_identities`` works; ``SATREFINE_BACKEND`` selects the
+Selects the package before ``satsimp`` is imported so a plain
+``pytest tests/refine_identities`` works; ``SATSIMP_BACKEND`` selects the
 ask backend as everywhere else.
 """
 from __future__ import annotations
@@ -16,12 +18,16 @@ from pathlib import Path
 
 import pytest
 
-os.environ.setdefault("SATREFINE_HANDLERS", "handlers_identities")
-os.environ.setdefault("SATREFINE_STRICT_LOOPS", "1")   # a tripped loop guard fails the test
-if "satrefine" in sys.modules and "satrefine." + os.environ["SATREFINE_HANDLERS"] not in sys.modules:
-    raise RuntimeError("satrefine was imported before conftest selected the handler package")
+from satsimp.engine.config import env, env_setdefault   # imports no method: the handler package is chosen first
 
-from satrefine.testing.harness import query_scope_recorder  # noqa: E402
+env_setdefault("HANDLERS", "handlers_identities")
+env_setdefault("STRICT_LOOPS", "1")   # a tripped loop guard fails the test
+if "satsimp.methods.refine" in sys.modules and \
+        "satsimp.methods.refine." + os.environ["SATSIMP_HANDLERS"] not in sys.modules:
+    raise RuntimeError("satsimp.methods.refine was imported before conftest selected the handler package")
+import satsimp.methods.refine  # noqa: E402,F401  (loads the selected handler package; importing satsimp does not)
+
+from satsimp.testing.harness import query_scope_recorder  # noqa: E402
 
 
 @pytest.fixture(autouse=True)
@@ -29,7 +35,7 @@ def _record_query_scope(request: pytest.FixtureRequest):
     yield from query_scope_recorder()(request)
 
 
-FULL_ENV = "SATREFINE_FULL_TESTS"
+FULL_ENV = "SATSIMP_FULL_TESTS"
 """Set to ``1`` to run the tests marked ``full`` (the gates do, as their own task)."""
 
 
@@ -40,7 +46,7 @@ def pytest_configure(config: pytest.Config) -> None:
 
 
 def pytest_ignore_collect(collection_path: Path, config: pytest.Config) -> bool | None:
-    """Collect ``build/`` (the tests of ``satrefine.build``), which pytest's
+    """Collect ``build/`` (the tests of ``satsimp.build``), which pytest's
     default ``norecursedirs`` skips by name."""
     if collection_path == Path(__file__).resolve().parent / "build":
         return False
@@ -51,8 +57,8 @@ def pytest_collection_modifyitems(config: pytest.Config, items: list) -> None:
     """Skip the ``full`` tests unless :data:`FULL_ENV` is ``1``: they were most
     of the suite's wall time, and the default run keeps a smaller check of the
     same property (the fixpoint of one family, ``build/test_generated.py``).  Run
-    them alone with ``SATREFINE_FULL_TESTS=1 pytest -m full tests/refine_identities``."""
-    if os.environ.get(FULL_ENV) == "1":
+    them alone with ``SATSIMP_FULL_TESTS=1 pytest -m full tests/refine_identities``."""
+    if env("FULL_TESTS") == "1":   # SATSIMP_FULL_TESTS, or the deprecated SATREFINE_FULL_TESTS
         return
     skip = pytest.mark.skip(reason=f"long check: run with {FULL_ENV}=1")
     for item in items:

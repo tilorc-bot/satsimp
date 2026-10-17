@@ -10,9 +10,9 @@ import pytest
 from sympy import Abs, I, Mod, Q, Rational, S, ceiling, floor, frac, im, oo, pi, re, sqrt, symbols, zoo
 from sympy.functions.elementary.miscellaneous import Rem
 
-from satrefine import refine
-from satrefine.identities.compat.upstream import handlers_dict
-from satrefine.testing.harness import assert_refinement_valid
+from satsimp import refine
+from satsimp.methods.refine.identities.compat.upstream import handlers_dict
+from satsimp.testing.harness import assert_refinement_valid
 
 x, y, n, m, k, a, b = symbols('x y n m k a b')
 
@@ -178,8 +178,8 @@ def test_refusal(expr, assumptions):
 
 
 def test_table_size_and_registration():
-    from satrefine.identities.compat import upstream as _upstream
-    from satrefine.identities.rules import integer_funcs as mod
+    from satsimp.methods.refine.identities.compat import upstream as _upstream
+    from satsimp.methods.refine.identities.rules import integer_funcs as mod
     assert len(mod.RULES) == 24 and len(mod.FACTS) == 3
     assert handlers_dict['floor'] is not _upstream.refine_floor_ceiling
     assert all(callable(handlers_dict[key]) for key in ('floor', 'ceiling', 'frac', 'Mod', 'Rem'))

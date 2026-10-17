@@ -4,8 +4,8 @@ from __future__ import annotations
 import pytest
 from sympy import simplify
 
-from satrefine import refine
-from satrefine.testing.harness import assert_refinement_valid
+from satsimp import refine
+from satsimp.testing.harness import assert_refinement_valid
 
 
 def ids(rows):

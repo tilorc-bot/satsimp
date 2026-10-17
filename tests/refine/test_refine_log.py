@@ -15,8 +15,8 @@ from sympy.core.numbers import I, pi
 from sympy.functions.elementary.complexes import Abs
 from sympy.functions.elementary.exponential import exp, log
 
-from satrefine import refine
-from satrefine.testing.harness import (
+from satsimp import refine
+from satsimp.testing.harness import (
     assert_refinement_valid,
 )
 

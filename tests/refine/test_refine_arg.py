@@ -21,8 +21,8 @@ from sympy.abc import x, z
 from sympy.core.numbers import nan, pi
 from sympy.functions.elementary.complexes import arg, im
 
-from satrefine import refine
-from satrefine.testing.harness import (
+from satsimp import refine
+from satsimp.testing.harness import (
     assert_refinement_valid,
     assert_refines_like_sympy,
     scripted_ask,

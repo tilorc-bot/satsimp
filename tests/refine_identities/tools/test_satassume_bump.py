@@ -1,4 +1,4 @@
-"""``satrefine/tools/satassume_bump.py`` and ``refine_compare diff``: the pin edit, the reports, the summary.
+"""``satsimp/tools/satassume_bump.py`` and ``refine_compare diff``: the pin edit, the reports, the summary.
 
 The workflow (``.github/workflows/satassume-bump.yml``) runs these end to end;
 here they run on the real ``pyproject.toml`` and on small made-up results.
@@ -16,15 +16,15 @@ import pytest
 
 tomllib = pytest.importorskip("tomllib")
 
-bump = importlib.import_module("satrefine.tools.satassume_bump")
-compare = importlib.import_module("satrefine.tools.refine_compare")
+bump = importlib.import_module("satsimp.tools.satassume_bump")
+compare = importlib.import_module("satsimp.tools.refine_compare")
 
 ROOT = Path(__file__).resolve().parents[3]
 OLD, NEW, HEAD = "a" * 40, "b" * 40, "c" * 40
 
 PYPROJECT = """\
 [project]
-name = "satrefine"
+name = "satsimp"
 # satassume pinned to a commit
 dependencies = [
     "satassume @ git+https://github.com/tilorc-bot/satassume@{ref}",
@@ -81,7 +81,7 @@ def _pr_lookups() -> list[tuple[str, str]]:
 
 def test_workflow_ignores_pull_requests_from_forks():
     """``gh pr list --head B`` also lists a fork's PR from a branch named B; every lookup must drop it."""
-    prs = [{"number": 7, "body": "fork <!-- satassume-bump satrefine=c satassume=b -->", "isCrossRepository": True},
+    prs = [{"number": 7, "body": "fork <!-- satassume-bump satsimp=c satassume=b -->", "isCrossRepository": True},
            {"number": 9, "body": "ours", "isCrossRepository": False}]
     jq = shutil.which("jq")
     for fields, query in _pr_lookups():
@@ -95,9 +95,13 @@ def test_workflow_ignores_pull_requests_from_forks():
 
 
 def test_marker_is_the_last_one():
-    quoted = "```\nE  assert '<!-- satassume-bump satrefine=x satassume=y -->'\n```\n"
-    body = quoted + bump.MARKER.format(satrefine=HEAD, satassume=NEW)
+    quoted = "```\nE  assert '<!-- satassume-bump satsimp=x satassume=y -->'\n```\n"
+    body = quoted + bump.MARKER.format(satsimp=HEAD, satassume=NEW)
     assert bump.marker(body) == (HEAD, NEW)
+
+
+def test_marker_of_a_report_written_before_the_rename():
+    assert bump.marker("<!-- satassume-bump satrefine=c satassume=b -->") == ("c", "b")
 
 
 def test_excerpt_fence_outlasts_backticks_in_the_text():

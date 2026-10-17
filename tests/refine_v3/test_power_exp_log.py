@@ -1,4 +1,4 @@
-"""Tests for ``satrefine.reference.v3.power_exp_log`` (``Pow``, ``exp``, ``log``).
+"""Tests for ``satsimp.methods.refine.reference.v3.power_exp_log`` (``Pow``, ``exp``, ``log``).
 
 Every rule has a positive test that checks the refined form and a numeric
 soundness check: the harness oracle draws sample points satisfying the
@@ -15,9 +15,9 @@ from sympy import (
     Abs, E, I, N, Pow, Q, Rational, S, exp, log, nan, oo, pi, sqrt, symbols, zoo,
 )
 
-from satrefine import refine
-from satrefine.reference.v3.power_exp_log import refine_Pow, refine_exp, refine_log
-from satrefine.testing.harness import assert_refinement_valid
+from satsimp import refine
+from satsimp.methods.refine.reference.v3.power_exp_log import refine_Pow, refine_exp, refine_log
+from satsimp.testing.harness import assert_refinement_valid
 
 x, y, z, a, b, n, m = symbols("x y z a b n m")
 
@@ -578,7 +578,7 @@ def test_handler_results_are_sympy_objects(handler, expr, assumptions):
 
 
 def test_handlers_are_registered():
-    from satrefine.identities.compat.upstream import handlers_dict
+    from satsimp.methods.refine.identities.compat.upstream import handlers_dict
     assert handlers_dict["Pow"] is refine_Pow
     assert handlers_dict["exp"] is refine_exp
     assert handlers_dict["log"] is refine_log

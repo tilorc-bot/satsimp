@@ -1,68 +1,29 @@
-"""Assumption-driven refinement backed by the independent engine.
+"""Deprecated: satrefine is now satsimp, and refine one of its methods.
 
-The vendored dispatcher and initial handlers live in
-:mod:`satrefine.identities.compat.upstream`; the handler package selected
-with ``SATREFINE_HANDLERS`` (default ``handlers_identities``; the reference
-``handlers_v3``) registers its handlers into ``handlers_dict`` when this
-package is imported.
+``import satrefine`` and ``satrefine.refine`` keep working for now, with a
+``DeprecationWarning``: this module re-exports the top-level names it had
+(``refine``, ``ask``, ``handlers_dict``, the upstream ``refine_*`` handlers,
+``HANDLERS_PACKAGE``, ``DEFAULT_HANDLERS``, ``HANDLERS_ENV_VAR``,
+``handlers_package``) from
+:mod:`satsimp.methods.refine`.  Use ``from satsimp import refine`` instead.
+Submodules (``satrefine.identities...``, ``satrefine.tools...``) are not
+aliased: their new names are in the README ("Renamed from satrefine").
+
+This alias ships in the satsimp distribution and will be removed in a later
+release.
 """
 from __future__ import annotations
 
-import importlib
-import pkgutil
+import warnings
 
-from .identities.compat.upstream import (
-    ask,
-    handlers_dict,
-    refine,
-    refine_Heaviside,
-    refine_Pow,
-    refine_abs,
-    refine_arg,
-    refine_atan2,
-    refine_exp,
-    refine_floor_ceiling,
-    refine_im,
-    refine_matrixelement,
-    refine_re,
-    refine_sign,
-    refine_sin_cos,
+warnings.warn("satrefine is deprecated: it is now satsimp; use `from satsimp import refine` "
+              "(refine's other names are in satsimp.methods.refine)", DeprecationWarning, stacklevel=2)
+
+from satsimp.methods.refine import *  # noqa: E402,F401,F403
+from satsimp.methods.refine import (  # noqa: E402,F401
+    DEFAULT_HANDLERS,
+    HANDLERS_ENV_VAR,
+    HANDLERS_PACKAGE,
+    __all__,
+    handlers_package,
 )
-
-__all__ = [
-    "ask",
-    "handlers_dict",
-    "refine",
-    "refine_Heaviside",
-    "refine_Pow",
-    "refine_abs",
-    "refine_arg",
-    "refine_atan2",
-    "refine_exp",
-    "refine_floor_ceiling",
-    "refine_im",
-    "refine_matrixelement",
-    "refine_re",
-    "refine_sign",
-    "refine_sin_cos",
-]
-
-
-from .identities.config import DEFAULT_HANDLERS, HANDLERS_ENV_VAR, handlers_package  # noqa: E402,F401  (re-exported)
-
-HANDLERS_PACKAGE = handlers_package()
-"""Name of the handler package this process loaded (fixed at import)."""
-
-
-def _load_handlers() -> None:
-    """Import every public module in the selected handler package."""
-    package = importlib.import_module(__name__ + "." + HANDLERS_PACKAGE)
-    path = getattr(package, "__path__", None)
-    if path is None:
-        return
-    for info in pkgutil.iter_modules(path):
-        if not info.name.startswith("_"):
-            importlib.import_module(f"{package.__name__}.{info.name}")
-
-
-_load_handlers()

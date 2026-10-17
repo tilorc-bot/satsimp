@@ -7,8 +7,8 @@ from sympy.abc import x
 from sympy.matrices import Matrix, eye
 from sympy.matrices.expressions import Identity, MatMul, MatrixSymbol
 
-from satrefine import refine
-from satrefine.testing.harness import (
+from satsimp import refine
+from satsimp.testing.harness import (
     assert_refines_like_sympy,
     stub_ask,
     use_ask,

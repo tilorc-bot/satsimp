@@ -7,9 +7,9 @@ from contextlib import nullcontext
 
 import pytest
 
-from satrefine import refine
-from satrefine.identities.compat import backend
-from satrefine.identities.core import driver
+from satsimp import refine
+from satsimp.engine import backend
+from satsimp.engine import driver
 
 from regressions import CASES, Case, holds
 

@@ -20,9 +20,9 @@ import textwrap
 
 SCRIPT = textwrap.dedent("""
     import os
-    os.environ["SATREFINE_HANDLERS"] = "handlers_identities"
+    os.environ["SATSIMP_HANDLERS"] = "handlers_identities"
     from sympy import Q, Symbol, sqrt, log
-    from satrefine import refine
+    from satsimp import refine
     x, n = Symbol('x'), Symbol('n')
     refine(log(x**n), Q.negative(n) & Q.nonnegative(x))
     print(Symbol('fresh').is_negative)
@@ -31,6 +31,6 @@ SCRIPT = textwrap.dedent("""
 
 
 def test_refine_is_independent_of_earlier_calls():
-    env = {**os.environ, "SATREFINE_BACKEND": "combined"}
+    env = {**os.environ, "SATSIMP_BACKEND": "combined"}
     out = subprocess.run([sys.executable, "-c", SCRIPT], capture_output=True, text=True, env=env, check=True)
     assert out.stdout.split()[-2:] == ["None", "Abs(x)"]

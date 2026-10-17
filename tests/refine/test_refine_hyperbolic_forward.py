@@ -16,8 +16,8 @@ from sympy.functions.elementary.hyperbolic import (
     tanh,
 )
 
-from satrefine import refine
-from satrefine.testing.harness import (
+from satsimp import refine
+from satsimp.testing.harness import (
     assert_refinement_valid,
     stub_ask,
     use_ask,

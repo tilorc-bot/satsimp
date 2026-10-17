@@ -5,7 +5,7 @@ top-level ``refine`` returns, with no Python ``RecursionError``, for any
 ``ask``: consistent, contradictory or adversarial.  The documented outcomes
 of a call are:
 
-* a result (with ``SATREFINE_STRICT_LOOPS`` off, a tripped guard returns the
+* a result (with ``SATSIMP_STRICT_LOOPS`` off, a tripped guard returns the
   input unchanged and records it in ``_dispatch.loop_events``);
 * :class:`RefineLoopError` when a guard trips and :func:`_dispatch.strict`;
 * never an error from ``ask`` finding the assumptions inconsistent (SymPy's
@@ -14,10 +14,10 @@ of a call are:
 The property test runs the engine, in both identity modes, against
 adversarial oracles over a sample of the battery and of the differential's
 random cases, and checks those outcomes and a time bound per call.  It is
-small by default (a few seconds); ``SATREFINE_TERMINATION_FUZZ=N`` runs N
+small by default (a few seconds); ``SATSIMP_TERMINATION_FUZZ=N`` runs N
 random cases per oracle and the whole battery instead, for manual runs::
 
-    SATREFINE_TERMINATION_FUZZ=1500 pytest tests/refine_identities/test_engine_termination.py
+    SATSIMP_TERMINATION_FUZZ=1500 pytest tests/refine_identities/test_engine_termination.py
 """
 from __future__ import annotations
 
@@ -33,15 +33,16 @@ from pathlib import Path
 import pytest
 from sympy import Function, Q, Symbol, factorial, log, pi
 
-from satrefine import refine
-from satrefine.identities.compat import upstream as _upstream
-from satrefine.identities.core import driver as _dispatch
-from satrefine.identities.core.driver import RefineLoopError
+from satsimp import refine
+from satsimp.methods.refine.identities.compat import upstream as _upstream
+from satsimp.engine import driver as _dispatch
+from satsimp.engine.config import env
+from satsimp.engine.driver import RefineLoopError
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-LARGE = int(os.environ.get("SATREFINE_TERMINATION_FUZZ", "0"))
+LARGE = int(env("TERMINATION_FUZZ", "0"))   # SATSIMP_TERMINATION_FUZZ, or the deprecated SATREFINE_ name
 CALL_SECONDS = 60 if LARGE else 20
 """The time bound of one call (far above any call's cost: a loop that the
 guard does not stop shows up as a timeout, not as a slow test)."""
@@ -152,7 +153,7 @@ def _battery_sample():
 
 def _random_cases(n):
     """``n`` differential cases, taken in turn from seeds 2, 3 and 7."""
-    from satrefine.tools.refine_differential import generate
+    from satsimp.tools.refine_differential import generate
     out, case = [], 0
     while len(out) < n:
         for seed in (2, 3, 7):
@@ -208,11 +209,11 @@ def test_b9_contradictory_signs_with_an_undecided_ask(mode):
 
 
 def test_b9_with_the_satassume_backend():
-    code = ("from sympy import *\nfrom satrefine import refine\nfrom satrefine.identities.core import driver as _dispatch\n"
+    code = ("from sympy import *\nfrom satsimp import refine\nfrom satsimp.engine import driver as _dispatch\n"
             "k = Symbol('k')\nfor mode in (_dispatch.tables, _dispatch.live):\n"
             "    with mode():\n        print(refine(factorial(log(k)), Q.negative(k) & Q.gt(k, pi/2)))\n")
-    env = dict(os.environ, SATREFINE_BACKEND="satassume", SATREFINE_HANDLERS="handlers_identities",
-               SATREFINE_STRICT_LOOPS="1", PYTHONPATH=os.pathsep.join(sys.path))
+    env = dict(os.environ, SATSIMP_BACKEND="satassume", SATSIMP_HANDLERS="handlers_identities",
+               SATSIMP_STRICT_LOOPS="1", PYTHONPATH=os.pathsep.join(sys.path))
     out = subprocess.run([sys.executable, "-c", code], env=env, cwd=ROOT, capture_output=True, text=True, timeout=300, check=False)
     assert out.returncode == 0, out.stderr[-2000:]
     assert out.stdout.split() == ["factorial(log(k))"] * 2

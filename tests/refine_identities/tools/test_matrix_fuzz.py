@@ -1,4 +1,4 @@
-"""The fuzzers' matrix family (``satrefine.tools.lib.matrices``, ``refine_fuzz --matrices``): the samplers satisfy the predicates
+"""The fuzzers' matrix family (``satsimp.tools.lib.matrices``, ``refine_fuzz --matrices``): the samplers satisfy the predicates
 they are drawn for, the checker finds a wrong rewrite, and a rewrite with no
 checkable point is counted as unchecked, not as passed.
 """
@@ -10,8 +10,8 @@ import pytest
 from sympy import (Determinant, I, Identity, ImmutableMatrix, MatrixSymbol, Q, Rational, S, Symbol, ZeroMatrix,
                    symbols)
 
-from satrefine.tools.lib import matrices as fz
-from satrefine.tools.lib.assumptions import c_imag
+from satsimp.tools.lib import matrices as fz
+from satsimp.tools.lib.assumptions import c_imag
 
 X = MatrixSymbol('X', 2, 2)
 n = fz.SIZE_SYMS[0]
@@ -93,6 +93,6 @@ def test_values_come_from_explicit_matrices_not_symbolic_rules():
 def test_row_coverage_names_the_firing_row():
     cov = fz.MatrixRowCoverage()
     with cov:
-        from satrefine import refine
+        from satsimp import refine
         refine(X.T*X, Q.orthogonal(X))
     assert any("Q.orthogonal(O)" in str(row) and n_ == 1 for row, n_ in cov.counts.items())

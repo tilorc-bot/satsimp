@@ -4,8 +4,8 @@ from __future__ import annotations
 from sympy.assumptions import Q
 from sympy.matrices.expressions import HadamardProduct, MatrixSymbol, ZeroMatrix
 
-from satrefine import refine
-from satrefine.testing.harness import (
+from satsimp import refine
+from satsimp.testing.harness import (
     recording_ask,
     reference_ask,
     stub_ask,

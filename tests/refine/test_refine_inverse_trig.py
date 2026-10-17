@@ -15,8 +15,8 @@ from sympy.functions.elementary.trigonometric import (
     tan,
 )
 
-from satrefine import refine
-from satrefine.testing.harness import (
+from satsimp import refine
+from satsimp.testing.harness import (
     assert_refinement_valid,
 )
 
