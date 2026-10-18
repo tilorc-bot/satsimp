@@ -188,8 +188,12 @@ def test_a_whole_answer_follows_satassume_state():
             assert backend.ask_whole(relation, Q.real(x) & unread) is None
             engine.uninterpreted = "free"
             assert backend.ask_whole(relation, Q.real(x) & unread) is True
+            state = backend._satassume_state()
+            engine.writeback = "none"                                # drops satassume's memo too
+            assert backend._satassume_state() != state
     finally:
         engine.uninterpreted = "free"
+        engine.writeback = "root-only"
         set_default_engine(engine)
         unregister(Q.whole_key)
         del Q.whole_key
