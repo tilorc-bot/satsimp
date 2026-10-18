@@ -11,7 +11,12 @@ satassume finds inconsistent raise (issue #18).  ``union`` keeps the old behavio
 Since satassume reads irrational constants as bounded LRA variables (main's
 b208af3), bounds such as ``pi/2`` are interpreted and stay with satassume,
 and since relations are read over the extended reals (main's #26) so are
-``oo`` bounds; floats and ``AccumBounds`` still route to SymPy.
+``oo`` bounds.  Float and ``AccumBounds`` bounds are still read by no theory,
+but since satassume's #83 (``Engine(uninterpreted="free")``, its default) such
+a relation is a free Boolean atom: the rest of the query still answers and
+nothing is routed to SymPy.  The ``no-theory`` route remains for an engine
+with ``uninterpreted="none"`` (satassume's opt-in old behaviour), which raises
+``Uninterpreted`` for them; ``unread_relations_none`` below installs one.
 """
 from __future__ import annotations
 
@@ -45,6 +50,12 @@ ROUTES = [
     # an infinite bound is read on the extended reals (main's #26): no SymPy fallback
     (Q.real(x), Q.nonnegative(x) & Q.lt(x, oo), True, None),
     (Q.finite(x), Q.gt(x, 1) & Q.lt(x, oo), True, None),
+    # a relation no theory interprets (a Float or AccumBounds bound) is a free atom
+    # (satassume's #83): the rest of the assumptions answers, SymPy is not asked
+    (Q.nonnegative(x), Q.nonnegative(x) & Q.le(x, 1.5), True, None),     # stated
+    (Q.positive(x), Q.real(x) & Q.gt(x, 1.5), None, None),               # the bound is not read (SymPy: None too)
+    (Q.real(x), Q.ge(x, 0) & Q.le(x, AccumBounds(0, 1)), None, None),   # x = oo satisfies the read part
+    (Q.extended_real(x), Q.ge(x, 0) & Q.le(x, AccumBounds(0, 1)), True, None),
     # no model in satassume: SymPy is asked
     (Q.invertible(X), Q.orthogonal(X), None, "matrix"),
     (Q.real(x), Q.symmetric(X), None, "matrix"),
@@ -52,17 +63,39 @@ ROUTES = [
     (Q.positive(x), Q.lt(x, 1) & Q.symmetric(X), None, "matrix"),
     (Q.eq(X, Y), True, None, "relation"),
     (_Unregistered()(x), True, None, "custom"),
-    # a relation no theory interprets drops the whole query in satassume
-    (Q.nonnegative(x), Q.nonnegative(x) & Q.le(x, 1.5), None, "no-theory"),
-    (Q.positive(x), Q.real(x) & Q.gt(x, 1.5), None, "no-theory"),
-    (Q.real(x), Q.ge(x, 0) & Q.le(x, AccumBounds(0, 1)), None, "no-theory"),
     (Q.positive(x), Q.positive(x) & Q.negative(x), None, "inconsistent"),
 ]
+
+UNREAD = [
+    # under uninterpreted="none", a relation no theory interprets drops the whole query
+    # in satassume, so SymPy is asked (it answers the first: the fact is stated)
+    (Q.nonnegative(x), Q.nonnegative(x) & Q.le(x, 1.5)),
+    (Q.positive(x), Q.real(x) & Q.gt(x, 1.5)),
+    (Q.real(x), Q.ge(x, 0) & Q.le(x, AccumBounds(0, 1))),
+]
+
+
+@pytest.fixture
+def unread_relations_none():
+    """satassume's default engine with ``uninterpreted="none"`` (else as the default)."""
+    from satassume import Engine
+    from satassume.sympy_api import default_engine, set_default_engine
+    engine = default_engine()
+    set_default_engine(Engine(uninterpreted="none"))
+    try:
+        yield
+    finally:
+        set_default_engine(engine)
 
 
 @pytest.mark.parametrize("proposition, assumptions, answer, reason", ROUTES)
 def test_route(proposition, assumptions, answer, reason):
     assert route(proposition, assumptions) == (answer, reason)
+
+
+@pytest.mark.parametrize("proposition, assumptions", UNREAD)
+def test_route_of_an_unread_relation_without_free_atoms(unread_relations_none, proposition, assumptions):
+    assert route(proposition, assumptions) == (None, "no-theory")
 
 
 def _sympy_forbidden(*args):
@@ -80,6 +113,12 @@ def test_in_scope_queries_never_reach_sympy(monkeypatch, proposition, assumption
 def test_out_of_scope_queries_reach_sympy():
     with backend.using("combined"):
         assert backend.ask(Q.invertible(X), Q.orthogonal(X)) is True
+    with backend.using("satassume"):
+        assert backend.ask(Q.invertible(X), Q.orthogonal(X)) is None
+
+
+def test_unread_relations_reach_sympy_without_free_atoms(unread_relations_none):
+    with backend.using("combined"):
         assert backend.ask(Q.nonnegative(x), Q.nonnegative(x) & Q.le(x, 1.5)) is True
     with backend.using("satassume"):
         assert backend.ask(Q.nonnegative(x), Q.nonnegative(x) & Q.le(x, 1.5)) is None
@@ -103,13 +142,20 @@ def test_a_whole_condition_is_asked_of_satassume_only(monkeypatch):
             assert backend.ask_whole(by_cases, Q.real(x)) is answer
     with backend.using("combined"):
         assert backend.ask_whole(Q.invertible(X) | Q.positive(x), Q.real(x)) is None      # matrix
-        assert backend.ask_whole(by_cases, Q.real(x) & Q.lt(x, 1.5)) is None             # no theory
         assert backend.ask_whole(by_cases, Q.positive(x) & Q.negative(x)) is None         # inconsistent
+        assert backend.ask_whole(by_cases, Q.real(x) & Q.lt(x, 1.5)) is True             # a free atom
+
+
+def test_a_whole_condition_with_an_unread_relation_is_none_without_free_atoms(unread_relations_none, monkeypatch):
+    monkeypatch.setattr(backend, "_guarded_sympy_ask", _sympy_forbidden)
+    with backend.using("combined"):
+        assert backend.ask_whole(Q.positive(x) | Q.nonpositive(x), Q.real(x) & Q.lt(x, 1.5)) is None
 
 
 def test_a_whole_answer_follows_satassume_state():
     """``ask_whole`` remembers answers only while satassume's own answer memo
-    would: a predicate (un)registration or a new default engine forgets them."""
+    would: a predicate (un)registration, a new default engine or a change of
+    the engine's settings forgets them."""
     from satassume import Engine
     from satassume.sympy_api import default_engine, register, set_default_engine, unregister
 
@@ -136,7 +182,18 @@ def test_a_whole_answer_follows_satassume_state():
             assert backend.ask_whole(relation, Q.real(x)) is None
             set_default_engine(engine)
             assert backend.ask_whole(relation, Q.real(x)) is True
+            unread = Q.lt(x, 1.5)                                    # a free atom by default
+            assert backend.ask_whole(relation, Q.real(x) & unread) is True
+            engine.uninterpreted = "none"                            # a setting, not the epoch
+            assert backend.ask_whole(relation, Q.real(x) & unread) is None
+            engine.uninterpreted = "free"
+            assert backend.ask_whole(relation, Q.real(x) & unread) is True
+            state = backend._satassume_state()
+            engine.writeback = "none"                                # drops satassume's memo too
+            assert backend._satassume_state() != state
     finally:
+        engine.uninterpreted = "free"
+        engine.writeback = "root-only"
         set_default_engine(engine)
         unregister(Q.whole_key)
         del Q.whole_key
