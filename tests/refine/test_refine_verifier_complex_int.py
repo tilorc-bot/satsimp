@@ -53,10 +53,10 @@ from satsimp.methods.refine import HANDLERS_PACKAGE
 from satsimp.testing.harness import (
     assert_refinement_valid,
     assert_refines_like_sympy,
-    needs_sympy_refine_handlers,
     reference_ask,
     scripted_ask,
     stub_ask,
+    sympy_refine_lacks_handlers,
     use_ask,
 )
 
@@ -276,23 +276,36 @@ def _corpus_short(expr: Any, assumptions: Any) -> bool:
     return HANDLERS_PACKAGE == "handlers_identities" and str(expr) in _CORPUS_SHORT
 
 
-@needs_sympy_refine_handlers("exp", "sin", "cos", "floor", "ceiling", "Heaviside")
+# the corpus's functions that SymPy 1.14's refine has no handler for: there, SymPy
+# leaves such a case unchanged where satsimp refines it, so it is left out
+_HEADS = ("exp", "sin", "cos", "floor", "ceiling", "Heaviside")
+
+
 def test_reference_ask_matches_upstream_on_broad_corpus() -> None:
+    compared = 0
     for expr, assumptions in _SYMPY_MATCHING_CASES:
         if _corpus_short(expr, assumptions):
             continue
         if (expr, assumptions) in _CORPUS_BETTER and refine(expr, assumptions) == _CORPUS_BETTER[expr, assumptions]:
             assert_refinement_valid(expr, assumptions, _CORPUS_BETTER[expr, assumptions])
             continue
+        if sympy_refine_lacks_handlers(expr, *_HEADS):
+            continue
         assert_refines_like_sympy(expr, assumptions)
+        compared += 1
+    assert compared
 
 
-@needs_sympy_refine_handlers("sin", "cos", "floor", "ceiling")
 def test_reference_ask_matches_upstream_where_identities_falls_short() -> None:
     cases = [(e, a) for e, a in _SYMPY_MATCHING_CASES if str(e) in _CORPUS_SHORT]
     assert len(cases) >= len(_CORPUS_SHORT)
+    compared = 0
     for expr, assumptions in cases:
+        if sympy_refine_lacks_handlers(expr, *_HEADS):
+            continue
         assert_refines_like_sympy(expr, assumptions)
+        compared += 1
+    assert compared
 
 
 def test_reference_ask_matrixelement_vendored_behavior() -> None:
