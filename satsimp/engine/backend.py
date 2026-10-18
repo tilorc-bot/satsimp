@@ -41,9 +41,17 @@ satassume said ``None`` and either
   with no registered clause function) or ``"other"`` (not a Boolean over
   applied predicates); or
 * a relation in the query has no theory that interprets it (a bound such as
-  a float or an ``AccumBounds``): satassume then drops the whole
-  query, including trivial facts such as ``Q.nonnegative(x)`` under
-  ``Q.nonnegative(x) & Q.le(x, 1.5)``, which SymPy answers cheaply.
+  a float or an ``AccumBounds``) and the engine was made with
+  ``uninterpreted="none"``: satassume then drops the whole query, including
+  trivial facts such as ``Q.nonnegative(x)`` under ``Q.nonnegative(x) &
+  Q.le(x, 1.5)``, which SymPy answers cheaply.  satassume's default since its
+  #83 is ``uninterpreted="free"``: such a relation is a free Boolean atom
+  (sound: only what it says is lost), the rest of the query answers, and the
+  query stays with satassume.  Of the queries this route sent to SymPy at
+  satassume a186157 (the battery, the differential's seeds 2, 3 and 7 and its
+  ``--ext`` inputs), SymPy decided none that the free reading leaves open:
+  satassume now gives the same answer, or finds the assumptions inconsistent
+  (a relation with a non-real side; see docs/refine.md, "Track C").
   Irrational constants (``pi/2``, ``sqrt(2)``, ``E``) are bounded LRA
   variables in satassume since its b208af3, and relations are read over
   the extended reals since its #26 (``x < oo`` says ``x`` is extended real
@@ -331,7 +339,8 @@ class _NoTheory(Exception):
 class _FlagUninterpreted:
     """The default engine, except that a relation no theory interprets raises
     :class:`_NoTheory` instead of ``Uninterpreted``, which
-    :func:`satassume.sympy_api.ask` would turn into a plain ``None``."""
+    :func:`satassume.sympy_api.ask` would turn into a plain ``None`` (only an
+    engine with ``uninterpreted="none"`` raises it)."""
 
     def __init__(self, engine: Any) -> None:
         self._engine = engine
@@ -369,7 +378,9 @@ def route(proposition: Any, assumptions: Any = True) -> tuple["bool | None", str
       (a relation over matrices, a wrong arity, or an engine without
       theories), not a relation as such;
     * ``"no-theory"``: the query translates, but no theory interprets one of
-      its relations;
+      its relations and the engine has ``uninterpreted="none"`` (with
+      satassume's default, ``"free"``, the relation is a free atom and the
+      answer stands);
     * ``"inconsistent"``: satassume found the assumptions inconsistent (the
       combined backend raises);
     * ``"error"``: satassume raised anything else.
@@ -458,13 +469,22 @@ def ask_whole(condition: Any, assumptions: Any = True) -> bool | None:
 
 
 def _satassume_state() -> tuple:
-    """What satassume's answers depend on besides the query: the default
-    engine and its registry state (registered clause-generating functions,
-    theory adapters; what resets satassume's answer memo), and the default
-    registry's version (which decides the scope of custom predicates)."""
-    from satassume.sympy_api import _registry_state, default_engine, extensions
+    """What satassume's answers depend on besides the query, i.e. what resets
+    satassume's own answer memo: the default engine, the registry epoch and
+    the engine's settings.
+
+    The epoch (``satassume.state.epoch.EPOCH``, a process-wide counter) is
+    bumped by every (un)registration on any ``Extensions`` registry (the
+    default one decides the scope of custom predicates), every template
+    registration and every assignment of an engine's ``extensions`` or
+    ``relation_specs``; the settings are the engine's own and drop only its
+    memo.  satassume exports no accessor for the epoch (``sympy_api`` reads it
+    as ``_EPOCH``); this is the one place satsimp reads it."""
+    from satassume.state.epoch import EPOCH
+    from satassume.sympy_api import default_engine
     eng = default_engine()
-    return (eng, _registry_state(eng), extensions.version)
+    return (eng, EPOCH[0], eng.templates, eng.discovery_budget, eng.transfer,
+            eng.uninterpreted, eng.relevance)
 
 
 #: the :func:`_satassume_state` the entries of :func:`_whole_answer` were computed in
