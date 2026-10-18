@@ -384,6 +384,7 @@ decides 126 of the 300 SymPy left open or raised on.
 | `acot(-z)`, `acoth(-z)` evaluate to `-acot(z)`, `-acoth(z)`, wrong at `z = 0` (B8) | `compat/sympy_fixes.rebuild` keeps a rebuilt `acot`/`acoth` of a possibly zero argument unevaluated; reported as sympy/sympy#30588 (closed upstream) |
 | `Q.extended_real(sqrt(z))` True for negative `z` (the `Pow` handler is the closure of the extended reals) | backend guard: a True is kept only for an integer exponent, or an extended nonnegative base and a real exponent; a neighbouring case is sympy/sympy#30619 |
 | `Q.nonzero` ("real and nonzero") False for `Abs(x)`, `x**2`, `x*y` with imaginary `x`, so they are "zero" and `c**2*X` the zero matrix | backend guard: a False from those three handlers is replaced by an answer checked under SymPy's definition |
+| `Q.nonzero(b**e)` follows `Q.nonzero(b)` alone, so `sqrt(x)` is "nonzero" for negative `x` (fixed by sympy/sympy#29225, not in 1.14) | none (the guard only replaces a False); its test is a strict xfail on SymPy without the fix |
 | `Pow._eval_refine`, `exp._eval_refine` call SymPy's `ask` directly | refine's copies (`sympy_fixes.EVAL_REFINE`) go through the backend and the memo |
 | `refine_Pow`: wrong for `sqrt(x**2)` with imaginary `x`, `sqrt(x**3)` with real `x`, `(x**3)**(1/3)`; crashes on `(-1)**(n + 1/2)` | replaced by `power_exp_log`'s rows |
 | the floor handler splits off integer terms only from an `Add` | `principal` writes its floor argument as `1/2 - im(w)/(2*pi)` |
