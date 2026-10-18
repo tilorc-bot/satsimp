@@ -477,14 +477,16 @@ def _satassume_state() -> tuple:
     bumped by every (un)registration on any ``Extensions`` registry (the
     default one decides the scope of custom predicates), every template
     registration and every assignment of an engine's ``extensions`` or
-    ``relation_specs``; the settings are the engine's own and drop only its
-    memo.  satassume exports no accessor for the epoch (``sympy_api`` reads it
+    ``relation_specs``; the settings (``templates``, ``discovery_budget``,
+    ``transfer``, ``uninterpreted``, ``relevance``, ``writeback``: all of them,
+    as listed in ``satassume.state.epoch``) are the engine's own and drop only
+    its memo.  satassume exports no accessor for the epoch (``sympy_api`` reads it
     as ``_EPOCH``); this is the one place satsimp reads it."""
     from satassume.state.epoch import EPOCH
     from satassume.sympy_api import default_engine
     eng = default_engine()
     return (eng, EPOCH[0], eng.templates, eng.discovery_budget, eng.transfer,
-            eng.uninterpreted, eng.relevance)
+            eng.uninterpreted, eng.relevance, eng.writeback)
 
 
 #: the :func:`_satassume_state` the entries of :func:`_whole_answer` were computed in
