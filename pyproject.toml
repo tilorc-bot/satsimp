@@ -9,10 +9,10 @@ description = "SymPy's refine() as rule tables, on the satassume ask engine"
 readme = "README.md"
 requires-python = ">=3.10"
 license = {text = "BSD-3-Clause"}
-# satassume pinned to the commit this code was developed against (the copy it
-# carried in tilorc-bot/satassume's refine-identities branch differed only in comments)
+# satassume pinned to a commit of its main, so outputs are reproducible; the nightly
+# .github/workflows/satassume-bump.yml moves it (docs/refine-testing.md, "The satassume pin")
 dependencies = [
-    "satassume @ git+https://github.com/tilorc-bot/satassume@a186157cc0b529d8e5e6e8a27a977c14f15ce913",
+    "satassume @ git+https://github.com/tilorc-bot/satassume@5a7d3b8d9e8e1a8d28a1f05892ff581ab4446bc9",
     "sympy>=1.12",
     "mpmath",
 ]

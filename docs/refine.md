@@ -338,7 +338,7 @@ satassume's answer, `None` included, except:
 | Reason | When | Then |
 |---|---|---|
 | `matrix`, `custom`, `other`, `relation` | `to_formula` cannot translate the proposition or the assumptions: matrix predicates or arguments, unregistered custom predicates, untranslatable relations | SymPy's `ask` |
-| `no-theory` | no satassume theory interprets a relation (a Float or `AccumBounds` bound) | SymPy's `ask` |
+| `no-theory` | no satassume theory interprets a relation (a Float or `AccumBounds` bound), and the engine has `uninterpreted="none"` (satassume's default, `"free"`, reads it as a free atom and answers) | SymPy's `ask` |
 | `inconsistent` | satassume finds the assumptions inconsistent | raise `ValueError`; the driver returns the input |
 | `error` | satassume raises anything else | SymPy's `ask`, `None` if that raises |
 
@@ -355,17 +355,27 @@ the `satassume` backend the battery's matrices family drops from 50 cases
 like v3 to 1 at `c0b7069`). SymPy's matrix answers are wrong in places, and
 one reaches refine: `ask(Q.unitary(X), Q.orthogonal(X))` is True, so
 `Adjoint(X)*X` under `Q.orthogonal(X)` refines to `I`, wrong for a complex
-orthogonal `X` (strict xfail; #67). Outside matrices, only unread relations.
+orthogonal `X` (strict xfail; #67). Outside matrices, nothing by default:
+unread relations only for an engine with `uninterpreted="none"` (below).
 
 **Track C** (SymPy only for matrices). Issue #7's blocker is mostly gone:
 satassume reads `oo` bounds (#26) and irrational constants exactly (#48),
 merged here in #24, #35 and #60. `ask(Q.zero(pi), Q.nonnegative(x) &
 Q.le(x, pi/2))` is False, and #7's battery case, `sqrt(asin(sin(x))**2)` under
 that bound, fires under `satassume` alone. Float and `AccumBounds` bounds are
-still unread: `ask(Q.real(x), Q.nonnegative(x) & Q.le(x, 1.5))` is None.
-Issue #64 proposes `Engine(uninterpreted="free")` (an unread relation as an
-opaque Boolean atom) as satassume's default; `route` must then keep the
-"a relation went unread" signal, or the `no-theory` fallback disappears.
+still unread, but since satassume's #83 (closing #64, in the pin since
+`5a7d3b8`) `Engine(uninterpreted="free")` is the default: an unread relation is
+a free Boolean atom, so `ask(Q.real(x), Q.nonnegative(x) & Q.le(x, 1.5))` is
+True and the query never reaches SymPy. `route` keeps the `no-theory` reason
+for an engine made with `uninterpreted="none"`. The signal was not rebuilt for
+the default (satassume's #81 suggests asking again with `"none"` on a miss)
+because it would win nothing measured: of the 432 distinct queries the route
+sent to SymPy at `a186157` over the battery, the differential's seeds 2, 3
+and 7 and 1,000 `--ext` inputs, SymPy decided 132; satassume now gives the
+same answer for 10 and finds the assumptions of the other 122 inconsistent
+(each states a relation with a non-real side, such as `Q.ge(Abs(k), x + I*z)`
+for nonzero `z`, and a relation says its sides are extended real). It also
+decides 126 of the 300 SymPy left open or raised on.
 
 ## SymPy defects and their handling
 
@@ -414,8 +424,9 @@ opaque Boolean atom) as satassume's default; `route` must then keep the
   power and multiset forms. Further cuts remove features: the generated-table
   mode (about 30 online and 358 offline lines), case splits (about 160), the
   matrix matcher (83), the `_eval_refine` copies (about 40).
-- **Track C** and the integer fallback (#62): wait for satassume (#64), or
-  drop unread relations in `engine/backend.py` (sound, a few lines).
+- **Track C** and the integer fallback (#62): satassume reads unread relations
+  as free atoms since #83 (in the pin since `5a7d3b8`); the integer fallback
+  is unchanged.
 - **Merging into `main`**: `main`'s CI runs `pytest tests` in one process;
   refine's test trees need a process each.
 
