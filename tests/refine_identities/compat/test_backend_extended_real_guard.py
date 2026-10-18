@@ -25,3 +25,14 @@ def test_conjugate_of_root_of_negative():
 def test_guarded_answer():
     assert backend._guarded_sympy_ask(Q.extended_real(sqrt(z)), Q.negative(z)) is None
     assert backend._guarded_sympy_ask(Q.extended_real(z**2), Q.negative(z)) is True
+
+
+def test_guarded_answer_without_ask_recursive(monkeypatch):
+    # SymPy as 1.14 has it (see test_backend_nonzero_guard.py's without_ask_recursive)
+    from importlib import import_module
+    monkeypatch.delattr(import_module("sympy.assumptions.ask"), "_ask_recursive", raising=False)
+    backend._handler_ask.cache_clear()
+    try:
+        test_guarded_answer()
+    finally:
+        backend._handler_ask.cache_clear()

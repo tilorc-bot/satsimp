@@ -33,6 +33,14 @@ from satsimp.engine.backend import ask
 
 x, y, z, b, c = Symbol('x'), Symbol('y'), Symbol('z'), Symbol('b'), Symbol('c')
 
+# SymPy before sympy/sympy#29225 (SymPy 1.14) has ``Q.nonzero(b**e)`` follow
+# ``Q.nonzero(b)`` alone, so it calls ``sqrt(x)`` nonzero for a negative ``x``.
+_POW_NONZERO_FROM_BASE = sympy_ask(Q.nonzero(x**y), Q.nonzero(x)) is True
+_pow_nonzero_from_base = pytest.mark.xfail(
+    _POW_NONZERO_FROM_BASE, strict=True,
+    reason="SymPy without sympy/sympy#29225 answers Q.nonzero(sqrt(x)) True under Q.negative(x); "
+           "the guard keeps SymPy's True")
+
 
 def test_abs_of_an_imaginary_number_is_positive():
     with backend.using("combined"):
@@ -87,7 +95,8 @@ KEPT = [
     (Q.nonzero(x*y), Q.imaginary(x) & Q.real(y) & Q.nonzero(y), False),
     (Q.zero(x*y), Q.zero(x), True),
     (Q.nonzero(x**2), Q.zero(x), False),
-    (Q.nonzero(sqrt(x)), Q.negative(x), False),    # imaginary
+    pytest.param(Q.nonzero(sqrt(x)), Q.negative(x), False,    # imaginary
+                 marks=_pow_nonzero_from_base),
     (Q.zero(Abs(x)), True, None),
 ]
 
@@ -101,3 +110,27 @@ def test_fuzz_case_log_exp_sqrt_square():
     # differential seed 3's form of the first case
     with backend.using("combined"):
         assert refine(log(exp(I*sqrt(x**2))), Q.imaginary(x)) != 0
+
+
+@pytest.fixture
+def without_ask_recursive(monkeypatch):
+    """SymPy as 1.14 has it: no ``sympy.assumptions.ask._ask_recursive`` (the
+    fork's handlers keep the reference they imported)."""
+    from importlib import import_module
+    # ``import sympy.assumptions.ask as m`` would bind the function ``ask``
+    monkeypatch.delattr(import_module("sympy.assumptions.ask"), "_ask_recursive", raising=False)
+    backend._handler_ask.cache_clear()
+    yield
+    backend._handler_ask.cache_clear()
+
+
+@pytest.mark.parametrize("prop, assumptions, sympy_answer, guarded", CASES)
+def test_guarded_answers_without_ask_recursive(without_ask_recursive, prop, assumptions, sympy_answer, guarded):
+    assert backend._handler_ask() is sympy_ask
+    assert backend._guarded_sympy_ask(prop, assumptions) is guarded
+
+
+@pytest.mark.parametrize("prop, assumptions, answer", KEPT)
+def test_guard_keeps_right_answers_without_ask_recursive(without_ask_recursive, prop, assumptions, answer):
+    assert backend._handler_ask() is sympy_ask
+    assert backend._guarded_sympy_ask(prop, assumptions) is answer
