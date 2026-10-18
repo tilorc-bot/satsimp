@@ -80,10 +80,20 @@ PYTHONHASHSEED=0 python -m pytest -q -n auto tests/refine_v3
   regression tests failed that way). The trees also share module basenames.
   `--import-mode=importlib` is no way out: tests import sibling helpers
   (`_rows`, `battery_v3`, `regressions`) and 167 fail.
-- **The SymPy fork.** Refine needs `tilorc-bot/sympy` at `6379c4da69` ("Add
-  refine handler for conjugate" on a base older than `ddbb536`); with PyPI's
-  SymPy 1.14, 25 refine tests fail. The gates take it from `SYMPY_PATH`
-  (default `/home/tilo/orion/sympy`, at that commit on this machine).
+- **The SymPy fork.** Refine's tests are written against `tilorc-bot/sympy` at
+  `6379c4da69` ("Add refine handler for conjugate" on a base older than
+  `ddbb536`), CI's baseline. The gates take it from `SYMPY_PATH` (default
+  `/home/tilo/orion/sympy`, at that commit on this machine).
+- **PyPI's SymPy 1.14.0.** CI also runs the three trees on it (Python 3.12):
+  refine must work there. What needs the newer SymPy is a strict xfail on it,
+  detected by feature, not version: the four tests that compare with SymPy's
+  own `refine` on functions 1.14 has no refine handler for (`sin`, `cos`,
+  `exp`, `floor`, `ceiling`, `Heaviside`;
+  `satsimp.testing.harness.needs_sympy_refine_handlers`), and the guard test
+  that `Q.nonzero(sqrt(x))` stays False under `Q.negative(x)` (SymPy's own
+  answer before sympy/sympy#29225 is True). The guards' sub-queries use
+  `_ask_recursive`, which 1.14 lacks; there they use `ask`, as 1.14's own
+  handlers do (`satsimp/engine/backend.py`, `_handler_ask`).
 
 At `075d1f8`: `tests/refine_identities` 2,903 passed, 1,920 skipped, 32
 xfailed; `tests/refine` 449 passed, 6 xfailed; `tests/refine_v3` 1,004 passed,
