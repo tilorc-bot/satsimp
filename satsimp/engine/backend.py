@@ -80,7 +80,7 @@ variable (``SATREFINE_BACKEND``, deprecated, as a fallback).  The default is ``c
 from __future__ import annotations
 
 from contextlib import contextmanager
-from functools import lru_cache
+from functools import cache, lru_cache
 from typing import Any, Callable, Iterator
 
 from . import config
@@ -121,6 +121,27 @@ _guard_on = False
 _guard_installed = False
 
 
+@cache
+def _handler_ask() -> Ask:
+    """The ``ask`` with which the guards below ask their sub-queries.
+
+    A guard stands in for a SymPy handler's answer, so it asks the way SymPy's
+    handlers do.  Since sympy/sympy#29921 (after SymPy 1.14) they call
+    ``sympy.assumptions.ask._ask_recursive``: the single-fact table and the
+    handlers, without ``ask``'s consistency check and SAT solvers, on the
+    assumptions ``ask`` passed the handler, which already include the global
+    ones.  SymPy 1.14 has no ``_ask_recursive``: its handlers call ``ask``
+    itself and are passed the local assumptions only, so ``ask`` (adding the
+    global ones) is the same choice there.  Resolved once.
+    """
+    try:
+        from sympy.assumptions.ask import _ask_recursive
+    except ImportError:  # SymPy 1.14 and earlier
+        from sympy.assumptions.ask import ask
+        return ask
+    return _ask_recursive
+
+
 def _nonzero_false_checked(expr: Any, assumptions: Any) -> bool | None:
     """``Q.nonzero(expr)`` for an ``Abs``, ``Pow`` or ``Mul`` on which SymPy said False.
 
@@ -131,7 +152,7 @@ def _nonzero_false_checked(expr: Any, assumptions: Any) -> bool | None:
     ``b**e = exp(e*log(b))``; ``Abs`` is real for a finite argument); else None.
     """
     from sympy import Abs, Mul, Pow, Q
-    from sympy.assumptions.ask import _ask_recursive as ask_
+    ask_ = _handler_ask()
     if isinstance(expr, Abs):
         (a,) = expr.args
         if ask_(Q.zero(a), assumptions):
@@ -174,7 +195,7 @@ def _extended_real_true_checked(expr: Any, assumptions: Any) -> bool | None:
     """``Q.extended_real(b**e)`` where SymPy's closure said True: True for an integer
     ``e``, or an extended nonnegative ``b`` and a real ``e``; else None."""
     from sympy import Q
-    from sympy.assumptions.ask import _ask_recursive as ask_
+    ask_ = _handler_ask()
     b, e = expr.base, expr.exp
     if ask_(Q.integer(e), assumptions):
         return True

@@ -68,6 +68,7 @@ from satsimp import refine
 from satsimp.testing.harness import (
     assert_refines_like_sympy,
     assert_refinement_valid,
+    needs_sympy_refine_handlers,
     scripted_ask,
     use_ask,
 )
@@ -409,6 +410,7 @@ def test_hyperbolic_integer_shift_is_conservative() -> None:
     assert refine(sin(x + n * pi), Q.integer(n)) == (-1) ** n * sin(x)
 
 
+@needs_sympy_refine_handlers("sin", "cos")
 def test_sin_cos_matches_sympy_under_reference_ask() -> None:
     corpus = [
         (sin(x), True),
