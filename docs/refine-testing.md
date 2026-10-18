@@ -85,13 +85,15 @@ PYTHONHASHSEED=0 python -m pytest -q -n auto tests/refine_v3
   `ddbb536`), CI's baseline. The gates take it from `SYMPY_PATH` (default
   `/home/tilo/orion/sympy`, at that commit on this machine).
 - **PyPI's SymPy 1.14.0.** CI also runs the three trees on it (Python 3.12):
-  refine must work there. What needs the newer SymPy is a strict xfail on it,
-  detected by feature, not version: the four tests that compare with SymPy's
-  own `refine` on functions 1.14 has no refine handler for (`sin`, `cos`,
-  `exp`, `floor`, `ceiling`, `Heaviside`;
-  `satsimp.testing.harness.needs_sympy_refine_handlers`), and the guard test
-  that `Q.nonzero(sqrt(x))` stays False under `Q.negative(x)` (SymPy's own
-  answer before sympy/sympy#29225 is True). The guards' sub-queries use
+  refine must work there. What needs the newer SymPy is detected by feature,
+  not version. The tests that compare with SymPy's own `refine` on functions
+  1.14 has no refine handler for (`sin`, `cos`, `exp`, `floor`, `ceiling`,
+  `Heaviside`) leave those cases out there: two tests made only of them are
+  strict xfails (`satsimp.testing.harness.needs_sympy_refine_handlers`), and
+  the two corpora in `test_refine_verifier_complex_int.py` compare the rest
+  (`sympy_refine_lacks_handlers`; 77 of 136 and 7 of 23 cases on 1.14). The
+  guard test that `Q.nonzero(sqrt(x))` stays False under `Q.negative(x)` is a
+  strict xfail as well (SymPy's own answer before sympy/sympy#29225 is True). The guards' sub-queries use
   `_ask_recursive`, which 1.14 lacks; there they use `ask`, as 1.14's own
   handlers do (`satsimp/engine/backend.py`, `_handler_ask`).
 

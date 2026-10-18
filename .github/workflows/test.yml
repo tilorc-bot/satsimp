@@ -12,8 +12,8 @@ jobs:
         # the refine tests need its assumptions/refine changes
         sympy: ["sympy @ git+https://github.com/tilorc-bot/sympy@6379c4da69"]
         include:
-          # released SymPy: refine must work on it; the tests that need the newer SymPy are
-          # strict xfails there (a feature check, not the version)
+          # released SymPy: refine must work on it; what needs the newer SymPy is a strict
+          # xfail or a left-out case there (a feature check, not the version)
           - python: "3.12"
             sympy: "sympy==1.14.0"
     steps:
