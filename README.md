@@ -44,6 +44,11 @@ PYTHONHASHSEED=0 python -m pytest -q -n auto tests/refine_v3
 The test trees share module basenames, so run each of `tests/refine_identities`,
 `tests/refine` and `tests/refine_v3` in its own process, as CI does.
 
+refine also works on PyPI's SymPy 1.14.0, which CI tests as well; there, the
+tests that need the newer SymPy are strict xfails or leave out the cases that
+need it (see
+[docs/refine-testing.md](docs/refine-testing.md), "CI").
+
 To depend on a commit (the old `tilorc-bot/satrefine` URL redirects here):
 
 ```sh

@@ -72,6 +72,44 @@ def assert_refines_like_sympy(expr: Any, assumptions: Any = True) -> None:
     )
 
 
+def _missing_sympy_refine_handlers(names: tuple[str, ...]) -> list[str]:
+    from sympy.assumptions.refine import handlers_dict
+
+    return [name for name in names if name not in handlers_dict]
+
+
+def needs_sympy_refine_handlers(*names: str) -> Any:
+    """A strict xfail for a test that compares with :func:`sympy.assumptions.refine.refine`
+    on functions it may have no refine handler for (SymPy 1.14 has none for ``sin``,
+    ``cos``, ``exp``, ``floor``, ``ceiling``, ``Heaviside``): SymPy then leaves the
+    input unchanged where satsimp refines it.  For a corpus with other cases too,
+    :func:`sympy_refine_lacks_handlers` leaves out only the affected ones."""
+    import pytest
+    from sympy import __version__ as sympy_version
+
+    missing = _missing_sympy_refine_handlers(names)
+    return pytest.mark.xfail(
+        bool(missing), strict=True,
+        reason=f"sympy.refine has no handler for {', '.join(missing)} in SymPy "
+               f"{sympy_version}, so it does not refine what satsimp does")
+
+
+def sympy_refine_lacks_handlers(expr: Any, *names: str) -> bool:
+    """Whether ``expr`` applies one of the functions ``names`` that
+    :func:`sympy.assumptions.refine.refine` has no handler for (see
+    :func:`needs_sympy_refine_handlers`); a power of ``E`` counts as ``exp``, as
+    SymPy's refine rebuilds it as one.  Always False on a SymPy with all of them."""
+    missing = _missing_sympy_refine_handlers(names)
+    if not missing:
+        return False
+    from sympy import E, Function, Pow
+
+    heads = {type(f).__name__ for f in expr.atoms(Function)}
+    if any(p.base == E for p in expr.atoms(Pow)):
+        heads.add("exp")
+    return not heads.isdisjoint(missing)
+
+
 def stub_ask(answers: Mapping[Any, bool | None]) -> Ask:
     """Build an ``ask`` returning scripted answers.
 
