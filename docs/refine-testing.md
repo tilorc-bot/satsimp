@@ -257,7 +257,7 @@ unequal), and `binomial(m**3, z - 1) -> 0` at a pole (seed 7). The matrix
 section's 3 are not artefacts: they appeared when #22 made the unitary rows
 plain identities, and rest on SymPy's wrong `ask(Q.unitary(X), Q.orthogonal(X))`
 (one checked: seed 2, case 1439, `X**(-1) + X*Adjoint(X)` under
-`Q.orthogonal(X)` gives `I + X.T`; see [refine.md](refine.md#the-ask-backend-compatbackendpy)).
+`Q.orthogonal(X)` gives `I + X.T`; see [refine.md](refine.md#the-ask-backend-enginebackendpy)).
 
 **Checker faults found and fixed**, each making a tool pass on work it had not
 done: relations decided with `.doit()`, so every case with one (353 of 1,485)
@@ -366,8 +366,9 @@ Not re-timed since A6; #60 brought `main`'s #45 (faster, same answers) and #48
 (+13% on queries with constants). Under the satassume backend alone the battery
 loses the matrix family (52 misses against 3 at `eb106a6`: satassume has no
 matrix predicates). The relation losses measured then were `pi/2` bounds,
-which satassume reads since #48; Float and `AccumBounds` bounds still fall back
-to SymPy (#64).
+which satassume reads since #48; Float and `AccumBounds` bounds fell back to
+SymPy until the pin moved to `5a7d3b8`, where satassume reads them as free
+atoms (its #83; [refine.md](refine.md#the-ask-backend-enginebackendpy)).
 
 ## Test data outside the repository
 

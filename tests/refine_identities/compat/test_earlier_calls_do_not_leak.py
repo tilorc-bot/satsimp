@@ -34,3 +34,31 @@ def test_refine_is_independent_of_earlier_calls():
     env = {**os.environ, "SATSIMP_BACKEND": "combined"}
     out = subprocess.run([sys.executable, "-c", SCRIPT], capture_output=True, text=True, env=env, check=True)
     assert out.stdout.split()[-2:] == ["None", "Abs(x)"]
+
+
+PROBE = textwrap.dedent("""
+    import os, sys
+    os.environ["SATSIMP_HANDLERS"] = "handlers_identities"
+    from sympy import Q, Symbol, Abs, Max
+    from satsimp import refine
+    x = Symbol('x')
+    A = Q.positive(x) & Q.integer(x)
+    if sys.argv[1:] == ["warm"]:
+        refine(Max(x, 1), A)
+    print(refine(Abs(x - 1), A))
+""")
+
+
+def test_refine_result_does_not_depend_on_an_earlier_relation_query():
+    """Issue #3: ``Max(x, 1)`` asks ``x >= 1`` under the same assumptions, and
+    satassume ``a186157`` kept the integer-gap fact it learned there in its
+    per-context session, so a later ``Abs(x - 1)`` refined to ``x - 1`` after it
+    and stayed ``Abs(x - 1)`` in a fresh process.  Fixed in satassume's main
+    (its #53, #97: an answer is a function of the query, never of earlier ones)."""
+    env = {**os.environ, "SATSIMP_BACKEND": "combined"}
+
+    def probe(*args):
+        return subprocess.run([sys.executable, "-c", PROBE, *args], capture_output=True, text=True,
+                              env=env, check=True).stdout.strip()
+
+    assert probe("warm") == probe()
