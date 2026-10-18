@@ -53,6 +53,7 @@ from satsimp.methods.refine import HANDLERS_PACKAGE
 from satsimp.testing.harness import (
     assert_refinement_valid,
     assert_refines_like_sympy,
+    needs_sympy_refine_handlers,
     reference_ask,
     scripted_ask,
     stub_ask,
@@ -275,6 +276,7 @@ def _corpus_short(expr: Any, assumptions: Any) -> bool:
     return HANDLERS_PACKAGE == "handlers_identities" and str(expr) in _CORPUS_SHORT
 
 
+@needs_sympy_refine_handlers("exp", "sin", "cos", "floor", "ceiling", "Heaviside")
 def test_reference_ask_matches_upstream_on_broad_corpus() -> None:
     for expr, assumptions in _SYMPY_MATCHING_CASES:
         if _corpus_short(expr, assumptions):
@@ -285,6 +287,7 @@ def test_reference_ask_matches_upstream_on_broad_corpus() -> None:
         assert_refines_like_sympy(expr, assumptions)
 
 
+@needs_sympy_refine_handlers("sin", "cos", "floor", "ceiling")
 def test_reference_ask_matches_upstream_where_identities_falls_short() -> None:
     cases = [(e, a) for e, a in _SYMPY_MATCHING_CASES if str(e) in _CORPUS_SHORT]
     assert len(cases) >= len(_CORPUS_SHORT)

@@ -17,6 +17,7 @@ from satsimp import refine
 from satsimp.testing.harness import (
     assert_refines_like_sympy,
     assert_refinement_valid,
+    needs_sympy_refine_handlers,
     stub_ask,
     use_ask,
 )
@@ -91,6 +92,7 @@ def test_none_safe() -> None:
             cos(x + n * S.Pi / 2)
 
 
+@needs_sympy_refine_handlers("sin", "cos")
 def test_matches_sympy_for_handled_cases() -> None:
     n = Symbol("n")
     assert_refines_like_sympy(cos(n * S.Pi), Q.even(n))
