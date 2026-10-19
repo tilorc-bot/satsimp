@@ -41,6 +41,10 @@ PYTHONHASHSEED=0 python -m pytest -q -n auto tests/refine
 PYTHONHASHSEED=0 python -m pytest -q -n auto tests/refine_v3
 ```
 
+Each tree runs in its own pytest process: each selects a handler package that
+registers into the one process-wide `handlers_dict`, so `tests/conftest.py`
+refuses a session that collects more than one (a bare `pytest` included).
+
 The test trees share module basenames, so run each of `tests/refine_identities`,
 `tests/refine` and `tests/refine_v3` in its own process, as CI does.
 
