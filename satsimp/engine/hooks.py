@@ -31,6 +31,15 @@ Set by :mod:`satsimp.methods.refine.identities.compat.sympy_fixes`:
 :data:`eval_refine`
     SymPy ``_eval_refine`` method -> the copy the driver calls instead (a
     subclass overriding the method keeps its own).
+:data:`eval_method`
+    the name of the SymPy method the driver calls on a node before its
+    handler (``"_eval_refine"``, the default; ``None``: none).
+
+Filled by refine's generated tables (``generated/__init__.py``):
+
+:data:`generated`
+    key -> handler from the generated rule tables, tried before the
+    dispatcher's handler (``driver.generated_handlers`` is this dict).
 
 Set by :mod:`satsimp.methods.refine.identities.compat.matrix_match`:
 
@@ -75,10 +84,15 @@ Pushed by offline code (:mod:`satsimp.build`) through :func:`.driver.observing`:
     ``on_fire(kind, row)`` is called on each table-row firing (``kind``
     ``"rule"`` or ``"identity"``), and its ``tables(key)``, when set, gives the
     generated table the driver uses for ``key`` (``None``: none), whatever the mode.
+
+Another method runs the engine with hooks of its own: :func:`installed` sets
+every hook for a block and restores refine's (the values set at load) after
+it, so refine's settings and registries are neither read nor changed by it.
 """
 from __future__ import annotations
 
-from typing import Any, Callable, NamedTuple
+from contextlib import contextmanager
+from typing import Any, Callable, Iterator, NamedTuple
 
 from sympy.core import Add, Mul
 from sympy.core.operations import LatticeOp
@@ -98,6 +112,8 @@ def rebuild(func: Any, args: Any, assumptions: Any) -> Any:
 
 
 eval_refine: dict = {}
+eval_method: str | None = "_eval_refine"
+generated: dict = {}
 
 match: list = []
 non_scalar: tuple = ()
@@ -124,3 +140,36 @@ class Observer(NamedTuple):
 
 
 observer: list[Observer] = []
+
+
+def _defaults() -> dict[str, Any]:
+    """Every hook's value before any method sets it (new containers on each call)."""
+    return {
+        "dispatcher": None, "ask_whole": ask_whole_default, "rebuild": rebuild_default,
+        "eval_refine": {}, "eval_method": "_eval_refine", "generated": {},
+        "match": [], "non_scalar": (), "commutative": (Add, Mul, LatticeOp),
+        "fallback": {}, "own_args": set(), "opaque": (), "conditional": None,
+        "modulus": None, "step": None, "two_valued": two_valued_default, "observer": [],
+    }
+
+
+ask_whole_default, rebuild_default, two_valued_default = ask_whole, rebuild, two_valued
+
+
+@contextmanager
+def installed(**values: Any) -> Iterator[None]:
+    """Run the block with these hooks (by name), every other hook at its
+    default, and restore the hooks as they were after it: how a method other
+    than refine runs the engine (``docs/architecture.md``)."""
+    fresh = _defaults()
+    unknown = set(values) - set(fresh)
+    if unknown:
+        raise TypeError(f"unknown hooks: {sorted(unknown)}")
+    fresh.update(values)
+    module = globals()
+    saved = {name: module[name] for name in fresh}
+    module.update(fresh)
+    try:
+        yield
+    finally:
+        module.update(saved)
