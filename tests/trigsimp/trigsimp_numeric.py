@@ -6,7 +6,8 @@ not defined at ``x = pi/2`` although ``sin(x)`` is.  :func:`value` evaluates
 bottom-up with mpmath at floating points, :func:`exact_value` with SymPy at
 exact points (the poles and zeros of the trigonometric functions, which a
 floating point never hits); both return ``None`` where the expression is not
-defined.
+defined.  :func:`holds` and :func:`holds_exact` decide a condition (a
+boolean of ``Q`` facts) at a point, the same two ways.
 """
 from __future__ import annotations
 
@@ -15,14 +16,23 @@ from typing import Any
 
 import mpmath
 from sympy import (
+    Abs,
     Add,
+    And,
     Basic,
     Mul,
+    Not,
     Number,
     NumberSymbol,
+    Or,
     Pow,
+    Q,
     S,
     Symbol,
+    acos,
+    asin,
+    atan,
+    atan2,
     cos,
     cosh,
     cot,
@@ -39,6 +49,7 @@ from sympy import (
     tan,
     tanh,
 )
+from sympy.assumptions import AppliedPredicate
 from sympy.core.numbers import ImaginaryUnit
 
 DPS = 40
@@ -47,7 +58,8 @@ DPS = 40
 _MP = {sin: mpmath.sin, cos: mpmath.cos, tan: mpmath.tan, cot: mpmath.cot,
        sec: mpmath.sec, csc: mpmath.csc, sinh: mpmath.sinh, cosh: mpmath.cosh,
        tanh: mpmath.tanh, coth: mpmath.coth, sech: mpmath.sech, csch: mpmath.csch,
-       exp: mpmath.exp, log: mpmath.log}
+       exp: mpmath.exp, log: mpmath.log, Abs: abs, asin: mpmath.asin, acos: mpmath.acos,
+       atan: mpmath.atan}
 _BAD = (S.ComplexInfinity, S.NaN, S.Infinity, S.NegativeInfinity)
 
 
@@ -98,6 +110,11 @@ def _node(e: Any, point: dict, sizes: list | None) -> Any:
         if base == 0 and mpmath.re(ex) <= 0:
             return None
         return _finite(mpmath.power(base, ex))
+    if e.func is atan2:          # real arguments only (SymPy's atan2 of complex numbers is not needed)
+        a, b = args
+        if mpmath.im(a) != 0 or mpmath.im(b) != 0 or (a == 0 and b == 0):
+            return None
+        return _finite(mpmath.atan2(mpmath.re(a), mpmath.re(b)))
     f = _MP.get(e.func)
     if f is not None:
         return _finite(f(args[0]))
@@ -152,3 +169,73 @@ def random_points(symbols: list, rng: random.Random, n: int) -> list[dict]:
 
 SPECIAL = [S.Zero, pi/6, pi/4, pi/3, pi/2, 2*pi/3, pi, 3*pi/2, -pi/2, -pi, 2*pi]
 """Exact points at which the trigonometric functions have their zeros and poles (and some regular points)."""
+
+
+# deciding a condition at a point ---------------------------------------------
+
+_SIGNS = {Q.positive: lambda v: v > 0, Q.negative: lambda v: v < 0, Q.nonnegative: lambda v: v >= 0,
+          Q.nonpositive: lambda v: v <= 0, Q.zero: lambda v: v == 0, Q.nonzero: lambda v: v != 0}
+_RELATIONS = {Q.gt: Q.positive, Q.ge: Q.nonnegative, Q.lt: Q.negative, Q.le: Q.nonpositive,
+              Q.eq: Q.zero, Q.ne: Q.nonzero}
+MARGIN = 1e-12
+"""A floating value this close to a boundary (relative to the values compared) is undecided."""
+
+
+def holds(cond: Any, point: dict) -> bool | None:
+    """``cond`` (``And``, ``Or``, ``Not`` of ``Q.real``, ``Q.integer``, the sign
+    predicates and the relations) at a floating ``point``; ``None`` when a value is
+    undefined there or too close to a boundary to tell."""
+    return _decide(cond, lambda e: (value(e, point), scale(e, point)))
+
+
+def holds_exact(cond: Any, point: dict) -> bool | None:
+    """``cond`` at an exact ``point``: an exact zero is decided exactly, every other
+    value by its numerical value to 40 digits."""
+    def at(e: Any) -> tuple:
+        v = exact_value(e, point)
+        if v is None:
+            return None, 1
+        if v == 0:
+            return mpmath.mpf(0), 1
+        with mpmath.workdps(DPS):
+            return mpmath.mpmathify(complex(v.evalf(DPS))), 1
+    return _decide(cond, at)
+
+
+def _decide(cond: Any, at: Any) -> bool | None:
+    if cond is True or cond is S.true:
+        return True
+    if cond is False or cond is S.false:
+        return False
+    if isinstance(cond, (And, Or)):
+        parts = [_decide(c, at) for c in cond.args]
+        if isinstance(cond, And):
+            return False if False in parts else (None if None in parts else True)
+        return True if True in parts else (None if None in parts else False)
+    if isinstance(cond, Not):
+        inner = _decide(cond.args[0], at)
+        return None if inner is None else not inner
+    assert isinstance(cond, AppliedPredicate), cond
+    f, args = cond.function, cond.arguments
+    if f in _RELATIONS:
+        f, args = _RELATIONS[f], (args[0] - args[1],)
+    v, size = at(args[0])
+    if v is None:
+        return None
+    tol = MARGIN*max(1, size)
+    with mpmath.workdps(DPS):
+        v = mpmath.mpmathify(v)
+        im = abs(mpmath.im(v))
+        if f is Q.integer:
+            d = abs(v - mpmath.nint(mpmath.re(v)))
+            return True if d == 0 else (None if d <= tol else False)
+        if f not in _SIGNS and f is not Q.real:
+            raise TypeError(f"no numeric decision for {cond}")
+        if im != 0:           # not real: every predicate here implies real (Q.nonzero too)
+            return None if im <= tol else False
+        if f is Q.real:
+            return True
+        r = mpmath.re(v)
+        if r != 0 and abs(r) <= tol:
+            return None
+        return bool(_SIGNS[f](r))

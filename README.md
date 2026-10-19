@@ -109,21 +109,24 @@ refine(Abs(x) + p, Q.negative(x), strict=True)
 ## trigsimp: a trigonometric simplifier
 
 ```python
-from sympy import cos, sin, symbols, tan
+from sympy import Q, asin, cos, pi, sin, sqrt, symbols, tan
 from satsimp import trigsimp
 
-x = symbols("x")
+x, y = symbols("x y")
 trigsimp(sin(x)**2 + cos(x)**2)                  # 1
 trigsimp(1/cos(x)**2 - tan(x)**2)                # 1
 trigsimp(sin(x)**3/cos(x)**3)                    # tan(x)**3
 trigsimp(-4*sin(x)**4 + 4*cos(x)**4 - 8*cos(x)**2)   # -4
+trigsimp(sqrt(1 - sin(x)**2), Q.gt(x, -pi/2) & Q.lt(x, pi/2))   # cos(x)
+trigsimp(sin(x)**y/cos(x)**y, Q.gt(x, 0) & Q.lt(x, pi/2))       # tan(x)**y
+trigsimp(asin(sin(x)), Q.ge(x, -pi/2) & Q.le(x, pi/2))          # x
 ```
 
 `trigsimp(expr, assumptions=True)` takes `assumptions` as `refine` does (a
 boolean of `Q` facts; the symbols' own assumptions are not read) and has no
 other options. It returns `expr` itself unless it finds a strictly smaller
 equal expression, smaller meaning fewer trigonometric functions, then a smaller
-`count_ops`, then fewer nodes. The result equals `expr` wherever `expr` is defined; it may be
+`count_ops`, then fewer `Abs`, then fewer nodes. The result equals `expr` wherever `expr` is defined; it may be
 defined at more points (`tan(x)*cos(x)` becomes `sin(x)`), never at fewer.
 
 What it does now (`satsimp/methods/trigsimp/`): a normalizing pass writes
@@ -139,17 +142,30 @@ the expression smaller:
 - angles: the addition formulas and double angles, each way round
   (`sin(x)*cos(y) + cos(x)*sin(y) = sin(x + y)`,
   `sin(x + y) + sin(x - y) = 2*sin(x)*cos(y)`, `1/2 - cos(2*x)/2 = sin(x)**2`);
-- the same rows for `sinh` and `cosh` (`cosh(u)**2 - sinh(u)**2 = 1`).
+- the same rows for `sinh` and `cosh` (`cosh(u)**2 - sinh(u)**2 = 1`);
+- rows that need the assumptions, fired only when `ask` proves their
+  condition: `sqrt(w**2) = Abs(w)` for real `w`, `Abs(w) = w` or `-w` by its
+  sign, `sin(u)**a/cos(u)**a = tan(u)**a` for a non-integer `a` when
+  `cos(u) > 0` (and the `cot`, `tanh`, `coth` forms), and `asin(sin(u))`,
+  `acos(cos(u))`, `atan(tan(u))`, `atan2(sin(u), cos(u))` equal to `u` on
+  their principal ranges.
+
+Signs of trigonometric values come from a sign table: before trigsimp asks a
+question, the facts the table proves about the `sin`, `cos`, `tan`, `cot`,
+`sinh`, `cosh` and `tanh` in it (`sin(u) > 0` for `0 < u < pi`,
+`-1 <= cos(u) <= 1` for real `u`, `cosh(u) >= 1`, ...) are added to the
+assumptions, and satassume composes them (`1 + cos(x) >= 0` for real `x`).
+Only the principal windows are in the table (no shifts by `2*pi*n`).
 
 Each step is greedy: an identity that pays off only after a step that does not
 shrink the expression is not found, and nothing is factored or cancelled.
 
-Not there yet: the sign tables, `Abs`/`sqrt` and inverse functions on
-principal ranges (rows that need the assumptions), noncommutative sums and
-symbolic exponents (returned
-unchanged). The design and the plan are in [docs/trigsimp.md](docs/trigsimp.md);
+Not there: noncommutative sums (returned unchanged), and shifts of the
+principal windows by multiples of `pi`. The design and the plan are in [docs/trigsimp.md](docs/trigsimp.md);
 the tests are `tests/trigsimp/` (SymPy's own trigsimp and fu identities, a
-numeric check of every row, a soundness fuzz).
+numeric check of every row and of the sign table, each conditional row under
+assumptions that prove and refute its condition, a soundness fuzz with and
+without assumptions).
 
 ## Renamed from satrefine
 

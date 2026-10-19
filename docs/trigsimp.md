@@ -12,7 +12,7 @@ soundness argument and the test plan. It is updated as the method grows.
 ## API
 
 ```python
-from sympy import Q, cos, sin, symbols
+from sympy import Q, cos, pi, sin, sqrt, symbols
 from satsimp import trigsimp
 
 x = symbols("x")
@@ -56,18 +56,37 @@ Then the rows that need the assumptions:
    is asked, the facts the table proves for the trig atoms in it are added to the
    assumptions, and satassume composes them (`1 + cos(x) >= 0`,
    `2*cos(x) > 0`). satassume alone does not decide signs of trig values.
-5. **Moduli and roots**: `sqrt(w**2) = Abs(w)` for real `w`, `Abs(w) = w` or
-   `-w` by its sign, `sin(u)**a/cos(u)**a = tan(u)**a` for any `a` when
-   `cos(u) > 0`.
+   The table (`rules/signs.py`) has rows for `sin`, `cos`, `tan`, `cot` on
+   their principal windows (`sin(u) > 0` on `(0, pi)`, `>= 0` on `[0, pi]`,
+   `< 0` on `(-pi, 0)`, `<= 0` on `[-pi, 0]`; `cos(u)` on `(-pi/2, pi/2)` and
+   `(pi/2, 3*pi/2)`; `tan(u)` and `cot(u)` on `(0, pi/2)` and `(-pi/2, 0)`;
+   no shifts by `2*pi*n`), and for `cosh(u) >= 1`, `sinh(u)` and `tanh(u)` with
+   the sign of `u` and `-1 < tanh(u) < 1`, for real `u`. A fact's condition is
+   proved by `ask` without the table's facts, so nothing recurses: `sin(sin(x))
+   > 0` for `0 < x < pi` is not proved, since `0 < sin(x) < pi` needs the facts
+   about `sin(x)`. The facts are collected per trig atom, assumptions and call.
+5. **Moduli and roots**: `sqrt(w**2) = Abs(w)` (and `1/sqrt(w**2) =
+   sqrt(1/w**2) = 1/Abs(w)`) for real `w`, `Abs(w) = w` or `-w` by its sign,
+   `sin(u)**a/cos(u)**a = tan(u)**a` for any non-integer `a` when
+   `cos(u) > 0` (an integer `a` is the quotient rows' case),
+   `cos(u)**a/sin(u)**a = cot(u)**a` when `sin(u) > 0`, and the hyperbolic
+   forms (`cosh(u) > 0` follows from `u` real). The exponents bind separately
+   and must add up to zero (`sin(x)**(5/2)*cos(x)**(-5/2)`); of the rows that
+   fire, the smallest result is kept (`cos(x)**y/sin(x)**y` is `cot(x)**y`,
+   not `tan(x)**(-y)`, for `0 < x < pi/2`).
 6. **Inverse compositions on principal ranges**: `asin(sin(u)) = u` when
    `-pi/2 <= u <= pi/2`, `acos(cos(u)) = u` on `[0, pi]`, `atan(tan(u)) = u`
-   on `(-pi/2, pi/2)`.
+   on `(-pi/2, pi/2)`, `atan2(sin(u), cos(u)) = u` on `(-pi, pi]`. The
+   normalizing pass writes `tan(u)` as `sin(u)/cos(u)` before `atan` sees it,
+   so `atan` also has the row `atan(sin(u)/cos(u)) = u`.
 
 Out of the first version: SymPy's `groebner` and `fu` searches (no search
 beyond one rewrite at a time, see *How it runs*), shifts by multiples of
 `pi/2` (refine has them; trigsimp would need its own rows, a method imports no
 other method), noncommutative factors (returned unchanged), and
-`exp(I*x)` forms.
+`exp(I*x)` forms. Kinds 5 and 6 cover the principal windows only (`Abs(sin(x))`
+stays for `2*pi < x < 3*pi`), and not the inverses of `sec`, `csc`, `cot` or of
+the hyperbolic functions.
 
 ## How it runs
 
@@ -87,8 +106,10 @@ so refine's registry and outputs are untouched and refine is never imported.
    side, products are distributed and powers of sums expanded, and the
    candidate with the smallest measure is kept if it is smaller than the sum.
    The measure is (number of trig function nodes, `count_ops`, number of
-   nodes), compared lexicographically, as in Fu et al.'s algorithm (the
-   node count breaks ties: `1/cos(x)**2` is smaller than `1 + tan(x)**2`).
+   `Abs` nodes, number of nodes), compared lexicographically, as in Fu et
+   al.'s algorithm (the node count breaks ties: `1/cos(x)**2` is smaller than
+   `1 + tan(x)**2`; before it, an `Abs` node does: `-sin(x)` is smaller than
+   `Abs(sin(x))`).
    The sites of one term are replaced together, the term divided by their
    left sides at once, so every division cancels a factor of the term.
    A product is rewritten only into a product: whether a term becomes a sum
@@ -99,7 +120,14 @@ so refine's registry and outputs are untouched and refine is never imported.
    (`sin(-e)` is `-sin(e)`): a sum can be smaller than another and larger
    negated.
    Rows of kinds 5 and 6 are rule rows: they fire when their condition is
-   provable.
+   provable through `ask`, never through SymPy's `.is_<fact>`. The rows of
+   `Abs`, roots and inverse functions serve both passes (keys `Pow`, `Abs`,
+   `asin`, `acos`, `atan`, `atan2`), so a modulus is resolved as soon as a
+   pass leaves its argument of known sign (`sqrt(1 - sin(x)**2)`: the
+   Pythagorean row makes `sqrt(cos(x)**2)`, then `Abs(cos(x))`, then `cos(x)`
+   for `-pi/2 < x < pi/2`); the quotient rows to other powers serve the
+   simplifying pass only, tried on a product before its substitution rows
+   (normalizing would write the `tan` they make back as `sin/cos`).
    The simplify pass runs twice on the normalized expression, once with
    every row and once after a pre-pass with the Pythagorean rows in `sin`
    and `cos` alone, and the smaller result is kept: bottom-up, the quotient
@@ -174,7 +202,16 @@ both the SymPy fork and PyPI SymPy 1.14.0:
   imports no method; refine's three test trees are run as before.
 
 The core (PR b) has the first two kinds of rows, PR (c) the third and the
-hyperbolic rows; none of them is conditional, so the fuzz runs without
-assumptions and the **assumptions** tests only check
-that assumptions are accepted and change nothing; both grow with the rows
-that need them.
+hyperbolic rows; none of them is conditional. PR (d) adds kinds 4-6: the
+sign table, whose rows are checked numerically on their intervals (endpoints
+included); the conditional rows, checked at random and exact points that
+satisfy their conditions (the closed endpoints among them), and at points
+outside, where each fails somewhere (the condition is needed); for each
+conditional row, assumptions that prove its condition (it fires), that
+refute it and none (the input stays); SymPy's cases that need these rows
+(`sqrt(sin(x)**2)`, `sin(x)**y/cos(x)**y`, the inverse functions) with and
+without assumptions, unchanged without unless the condition is provable from
+nothing (`sin(1)**y/cos(1)**y` is `tan(1)**y`: `cos(1) > 0`); and the fuzz
+under assumptions (`0 < x < pi/2`, `-pi/2 < x < 0`, `0 < x < pi`, `x`
+real) at points satisfying them, with `Abs`, roots, inverse functions and
+quotients to symbolic powers around its terms.
