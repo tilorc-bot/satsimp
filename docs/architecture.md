@@ -110,7 +110,13 @@ tables in `hooks.generated`, `eval_method=None` to skip SymPy's `_eval_refine`
 methods; what it does not name is the hook's default) and restores refine's
 after it. A driver call under another dispatcher is a top-level call of its
 own (its own result cache, firing counts and split budget), even when it is
-made from inside a refine call. Refine's registries and settings are never read
+made from inside a refine call; what it does share with that call is
+the generated-table mode (`SATSIMP_IDENTITIES`, `driver.live()`) and whether a
+case split is exploring (no split is tried then). Inside a block, everything,
+`satsimp.refine` included, runs on the block's hooks: a method does not call
+another method there. Import a method before entering another's block: one
+first imported inside it sets its hooks there, and `installed()` keeps what it
+set for afterwards but raises `LoadedInsideError`. Refine's registries and settings are never read
 or changed by it; the check is refine's output and speed: the three test
 trees, the battery comparison (`python -m satsimp.tools.refine_compare`) and
 `refine_gates.sh`. Still refine-shaped: `build/` (table generation and
