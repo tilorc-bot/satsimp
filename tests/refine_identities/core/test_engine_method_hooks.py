@@ -91,25 +91,60 @@ def test_a_call_from_inside_refine_is_its_own_top_level_call():
     assert driver.splits_left[0] == budget    # each top-level call restores the budget it found
 
 
+def test_a_block_under_refines_dispatcher_is_its_own_top_level_call():
+    """Same dispatcher, other hooks: not the refine call's cache."""
+    from sympy import Function
+
+    class Probe(Function):
+        pass
+
+    seen = []
+
+    def probe(expr, assumptions):
+        with hooks.installed(dispatcher=upstream, eval_method=None, generated={}):
+            seen.append(driver._calls[-1])
+            driver.refine(expr.args[0], assumptions)
+            seen.append(driver._calls[-1])
+        return expr.args[0]
+
+    handlers_dict["Probe"] = probe
+    try:
+        refine(Probe(log(x)), Q.negative(x))
+    finally:
+        del handlers_dict["Probe"]
+    assert seen and seen[0] is seen[1] and not driver._calls
+
+
+def test_a_hook_rebound_inside_a_block_is_refused():
+    with pytest.raises(RuntimeError), hooks.installed(dispatcher=_toy()):
+        hooks.step = log
+    assert hooks.step is not log
+
+
+def test_any_container_type_is_accepted():
+    from collections import defaultdict
+    with hooks.installed(dispatcher=_toy(), eval_method=None, generated=defaultdict(lambda: None)):
+        assert driver.refine(sin(x)) == cos(x)
+
+
 _LOADED_INSIDE = """
 from types import SimpleNamespace
-from sympy import I, Q, log, pi, symbols
+from sympy import I, Q, log, pi, sin, symbols
 from satsimp.engine import driver, hooks
 x = symbols("x")
 toy = SimpleNamespace(ask=lambda p, a=True: None, handlers_dict={})
-try:
-    with hooks.installed(dispatcher=toy, eval_method=None):
-        import satsimp
-        satsimp.refine(log(x), Q.negative(x))
-except hooks.LoadedInsideError:
-    pass
-else:
-    raise SystemExit("no LoadedInsideError")
+mine = dict(eval_refine={}, fallback={}, own_args=set(), match=[], generated={})
+with hooks.installed(dispatcher=toy, eval_method=None, **mine):
+    import satsimp
+    assert satsimp.refine(log(x), Q.negative(x)) == log(x)          # the block's hooks, not refine's
+    assert all(not v for v in mine.values()) and hooks.dispatcher is toy
 assert satsimp.refine(log(x), Q.negative(x)) == log(-x) + I*pi
+assert hooks.eval_refine and hooks.fallback and hooks.own_args and hooks.match
+assert driver.generated_handlers is hooks.generated and hooks.generated
 print("ok")
 """
 
 
-def test_a_method_imported_inside_a_block_is_refused_and_still_works_after():
+def test_a_method_imported_inside_a_block_sets_its_hooks_for_after_it():
     out = subprocess.run([sys.executable, "-c", _LOADED_INSIDE], capture_output=True, text=True)
     assert out.stdout.strip() == "ok", out.stderr

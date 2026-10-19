@@ -50,7 +50,7 @@ symbols of unknown sign)."""
 splits_left: list[int] = [MAX_SPLITS]
 """The budget of the current top-level call (reset on entry)."""
 
-generated_handlers: dict = hooks.generated
+generated_handlers: dict = hooks.base("generated")
 """Handlers from the generated rule tables (``generated/<family>.py``), by key
 (:data:`.hooks.generated`, the dict refine's tables fill; the driver reads the hook).
 
@@ -105,8 +105,8 @@ _firings: list[int] = []   # a stack entry per active top-level call and explora
 
 _results: list[dict] = []  # the result cache of the active top-level call
 
-_dispatchers: list = []    # the dispatcher of each active top-level call: a call under another
-                           # dispatcher (another method's, :func:`.hooks.installed`) is top-level
+_dispatchers: list = []    # the dispatcher and hooks block of each active top-level call: a call
+                           # in another block (another method's, :func:`.hooks.installed`) is top-level
 
 state: list = []
 """Engine state a result depends on besides the node and the assumptions (a
@@ -148,13 +148,13 @@ def refine(expr: Any, assumptions: Any = True) -> Any:
     contradiction must not decide between a result and a crash.  Inside the
     call the error still propagates (a case split drops an inconsistent
     branch that way)."""
-    if _calls and _dispatchers[-1] is hooks.dispatcher:
+    if _calls and _dispatchers[-1][0] is hooks.dispatcher and _dispatchers[-1][1] is hooks.block():
         return _refine(expr, assumptions)
     call = _Call()
     _calls.append(call)
     _firings.append(0)
     _results.append({})
-    _dispatchers.append(hooks.dispatcher)
+    _dispatchers.append((hooks.dispatcher, hooks.block()))
     saved_splits = splits_left[0]
     splits_left[0] = MAX_SPLITS
     saved_ask = hooks.dispatcher.ask

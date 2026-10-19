@@ -1,7 +1,7 @@
 """Every way a method (or offline code) plugs into the engine: plain module attributes.
 
-The engine reads them at call time (``hooks.name``), so whoever sets one does so
-once, at load, by assignment or in place.  Nothing in the engine names a specific
+The engine reads them at call time (``hooks.name``); a method sets them once, at
+load, with :func:`plug` (by name) or in place on :func:`base` (a container).  Nothing in the engine names a specific
 SymPy function; what it needs to know about particular heads is a role here.
 The hooks are process-wide, and today one method sets them: refine, as listed
 below (``docs/architecture.md``, "Adding a method").
@@ -88,6 +88,8 @@ Pushed by offline code (:mod:`satsimp.build`) through :func:`.driver.observing`:
 Another method runs the engine with hooks of its own: :func:`installed` sets
 every hook for a block and restores refine's (the values set at load) after
 it, so refine's settings and registries are neither read nor changed by it.
+A method imported inside such a block still sets its hooks outside it
+(:func:`plug`, :func:`base`).
 """
 from __future__ import annotations
 
@@ -156,8 +158,30 @@ def _defaults() -> dict[str, Any]:
 ask_whole_default, rebuild_default, two_valued_default = ask_whole, rebuild, two_valued
 
 
-class LoadedInsideError(RuntimeError):
-    """A method set hooks while another method's were installed (it was imported inside the block)."""
+_outside: list[dict] = []
+"""The hooks each active :func:`installed` block restores after it, outermost
+first: ``_outside[0]`` is what holds outside every block."""
+
+
+def base(name: str) -> Any:
+    """Hook ``name`` as it is outside every :func:`installed` block: the container a
+    method fills at load (in place), whether or not it is imported inside one."""
+    return _outside[0][name] if _outside else globals()[name]
+
+
+def plug(**values: Any) -> None:
+    """Set hooks (by name) at load: outside every :func:`installed` block, so a
+    method imported inside one sets them for afterwards, and the block goes on
+    with its own."""
+    unknown = set(values) - set(_defaults())
+    if unknown:
+        raise TypeError(f"unknown hooks: {sorted(unknown)}")
+    (_outside[0] if _outside else globals()).update(values)
+
+
+def block() -> Any:
+    """A token of the innermost active :func:`installed` block (``None`` outside every block)."""
+    return _outside[-1] if _outside else None
 
 
 @contextmanager
@@ -166,12 +190,11 @@ def installed(**values: Any) -> Iterator[None]:
     default, and restore the hooks as they were after it: how a method other
     than refine runs the engine (``docs/architecture.md``).
 
-    A method plugs in by setting hooks when it is imported.  If that happens
-    inside the block (refine imported for the first time there), what it set
-    is carried over to the hooks restored after the block, so the method works
-    afterwards, and :class:`LoadedInsideError` is raised: the rest of the block
-    ran with that method's hooks, so its result cannot be trusted.  Import a
-    method before entering another's block."""
+    A method plugs in at load through :func:`plug` and :func:`base`, which
+    set the hooks outside every block: a method first imported inside one
+    (refine, there) leaves the block's hooks alone and works after it.  A hook
+    rebound directly inside the block (``hooks.name = ...``) would be lost:
+    :class:`RuntimeError`."""
     fresh = _defaults()
     unknown = set(values) - set(fresh)
     if unknown:
@@ -179,40 +202,14 @@ def installed(**values: Any) -> Iterator[None]:
     fresh.update(values)
     module = globals()
     saved = {name: module[name] for name in fresh}
-    entered = {name: _copied(value) for name, value in fresh.items()}
+    _outside.append(saved)
     module.update(fresh)
     try:
         yield
     finally:
-        loaded = [name for name in fresh
-                  if _carry(name, module[name], fresh[name], entered[name], saved, name not in values)]
+        rebound = sorted(name for name in fresh if module[name] is not fresh[name])
+        _outside.pop()
         module.update(saved)
-    if loaded:
-        raise LoadedInsideError(f"hooks {sorted(loaded)} were set inside another method's block "
-                                "(a method imported there); they are kept, import methods first")
-
-
-def _copied(value: Any) -> Any:
-    return type(value)(value) if isinstance(value, (dict, list, set)) else value
-
-
-def _carry(name: str, now: Any, given: Any, entered: Any, saved: dict, default: bool) -> bool:
-    """Carry over to ``saved`` what was set on hook ``name`` inside the block
-    (rebound, or, for a hook left at its ``default``, a container changed in
-    place: a container the block's method passed is its own to fill); whether
-    anything was."""
-    if now is not given:
-        saved[name] = now
-        return True
-    if not default:
-        return False
-    if isinstance(now, dict) and now != entered:
-        saved[name].update({k: v for k, v in now.items() if k not in entered or entered[k] is not v})
-        return True
-    if isinstance(now, list) and now != entered:
-        saved[name].extend(v for v in now if v not in entered)
-        return True
-    if isinstance(now, set) and now != entered:
-        saved[name].update(now - entered)
-        return True
-    return False
+    if rebound:
+        raise RuntimeError(f"hooks {rebound} were rebound inside an installed() block; "
+                           "a method sets its hooks with hooks.plug() and hooks.base()")
