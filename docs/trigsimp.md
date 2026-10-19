@@ -78,9 +78,13 @@ so refine's registry and outputs are untouched and refine is never imported.
    a term, or all such places at once, the matches are replaced by the right
    side, products are distributed and powers of sums expanded, and the
    candidate with the smallest measure is kept if it is smaller than the sum.
-   The measure is (number of trig function nodes, `count_ops`), compared
-   lexicographically, as in Fu et al.'s algorithm. Rows of kinds 5 and 6 are
-   rule rows: they fire when their condition is provable.
+   The measure is (number of trig function nodes, `count_ops`, number of
+   nodes), compared lexicographically, as in Fu et al.'s algorithm (the
+   node count breaks ties: `1/cos(x)**2` is smaller than `1 + tan(x)**2`).
+   The sites of one term are replaced together, the term divided by their
+   left sides at once, so every division cancels a factor of the term.
+   Rows of kinds 5 and 6 are rule rows: they fire when their condition is
+   provable.
    The simplify pass runs twice on the normalized expression, once with
    every row and once after a pre-pass with the Pythagorean rows in `sin`
    and `cos` alone, and the smaller result is kept: bottom-up, the quotient
@@ -105,7 +109,12 @@ pays off after a step that does not shrink the expression is not found
 The claim: `trigsimp(e, A)` equals `e` at every point satisfying `A` where
 `e` is defined, meaning every subexpression of `e` evaluates to a finite
 number. The result may be defined at more points (`tan(x)*cos(x)` becomes
-`sin(x)`), never at fewer.
+`sin(x)`), never at fewer. An expression defined nowhere (it divides by
+`sin(x)**2 + cos(x)**2 - 1`) is outside the claim: what comes back for it
+can be finite, or contain `zoo`, as SymPy's own arithmetic makes it. SymPy's
+automatic simplification of products drops a pole of the input when a
+rewrite builds one (normalizing `tan(x)*cos(x)` builds
+`sin(x)/cos(x)*cos(x)`, which is `sin(x)`); the claim allows that too.
 
 It holds because every step preserves it:
 

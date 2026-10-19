@@ -123,7 +123,7 @@ trigsimp(-4*sin(x)**4 + 4*cos(x)**4 - 8*cos(x)**2)   # -4
 boolean of `Q` facts; the symbols' own assumptions are not read) and has no
 other options. It returns `expr` itself unless it finds a strictly smaller
 equal expression, smaller meaning fewer trigonometric functions, then a smaller
-`count_ops`. The result equals `expr` wherever `expr` is defined; it may be
+`count_ops`, then fewer nodes. The result equals `expr` wherever `expr` is defined; it may be
 defined at more points (`tan(x)*cos(x)` becomes `sin(x)`), never at fewer.
 
 What it does now (the core, `satsimp/methods/trigsimp/`): a normalizing pass

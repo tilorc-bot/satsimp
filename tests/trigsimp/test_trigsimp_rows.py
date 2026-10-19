@@ -26,7 +26,7 @@ from trigsimp_numeric import (
 
 from satsimp.methods.trigsimp import wiring
 from satsimp.methods.trigsimp.rules import normal, pythagorean, quotients
-from satsimp.methods.trigsimp.substitute import _pattern
+from satsimp.methods.trigsimp.substitute import _candidate, _pattern
 
 ROWS = [("normal", row) for row in normal.RULES] + \
        [("quotients", row) for row in quotients.SUBSTITUTIONS] + \
@@ -95,3 +95,17 @@ def test_checker_finds_a_wrong_row_and_a_removed_pole():
     vl, vr = exact_value(tan(u)*cos(u), {u: pi/2}), exact_value(sin(u), {u: pi/2})
     assert vl is None and vr == 1
     assert exact_value(sin(u)/cos(u), {u: pi/2}) is None and exact_value(tan(u), {u: pi/2}) is None
+
+
+def test_sites_of_one_term_are_replaced_together():
+    # two sites of sin(u)**2 in one term: dividing the first replacement (a sum) by
+    # sin(y)**2 would put a pole at y = 0, where the term is 0
+    u, x, y = symbols('u x y')
+    lhs, rhs = sin(u)**2, 1 - cos(u)**2
+    for term, sites in ((sin(x)**2*sin(y)**2, [({u: x}, 1), ({u: y}, 1)]),
+                        (sin(x)**5*sin(y)**3, [({u: x}, 2), ({u: y}, 1)])):
+        chosen = [(0, frozenset(b.items()), b, j) for b, j in sites]
+        cand = _candidate([term], chosen, lhs, rhs)
+        for point in ({x: 0.7, y: 0}, {x: 0.7, y: -1.3}, {x: 1j/3, y: 2 + 1j}):
+            got = value(cand, point)
+            assert got is not None and close(got, value(term, point))

@@ -24,14 +24,21 @@ from sympy import (
     S,
     Symbol,
     cos,
+    cosh,
     cot,
+    coth,
     csc,
+    csch,
+    exp,
+    log,
     pi,
     sec,
+    sech,
     sin,
+    sinh,
     tan,
+    tanh,
 )
-from sympy import cosh, coth, csch, exp, log, sech, sinh, tanh
 from sympy.core.numbers import ImaginaryUnit
 
 DPS = 40
