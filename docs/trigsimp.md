@@ -94,7 +94,10 @@ so refine's registry and outputs are untouched and refine is never imported.
    A product is rewritten only into a product: whether a term becomes a sum
    is decided by its sum, where a product and the sum it sits in cannot
    disagree about what is smaller (`-2*sinh(x)**2` alone is larger than
-   `1 - cosh(2*x)`, inside `1/sinh(x/2) - 2*sinh(x)**2` it is not).
+   `1 - cosh(2*x)`, inside `1/sinh(x/2) - 2*sinh(x)**2` it is not). For the
+   same reason a sum is measured in the sign an odd function keeps for it
+   (`sin(-e)` is `-sin(e)`): a sum can be smaller than another and larger
+   negated.
    Rows of kinds 5 and 6 are rule rows: they fire when their condition is
    provable.
    The simplify pass runs twice on the normalized expression, once with
