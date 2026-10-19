@@ -1,16 +1,17 @@
 """trigsimp's results on the identities of SymPy's own tests (``docs/trigsimp.md``, "Test plan").
 
 The cases come from ``sympy/simplify/tests/test_trigsimp.py`` and
-``test_fu.py`` (the test function is named in each group).  The core
-(normalizing pass, quotient and Pythagorean rows) gives:
+``test_fu.py`` (the test function is named in each group).  The rows so far
+(normalizing pass, quotient, Pythagorean and angle rows, circular and
+hyperbolic) give:
 
 * :data:`SIMPLIFIED`: the result, in this method's form where it differs
   from SymPy's (``cot(x)**2`` where SymPy gives ``1/tan(x)**2``);
-* :data:`UNCHANGED`: the input itself, either out of the core's scope
-  (angle-addition, double-angle and hyperbolic rows come with PR (c), sign
-  tables, ``Abs``/``sqrt`` and principal ranges with PR (d); noncommutative
-  factors and symbolic exponents are left alone) or not made smaller by any row;
-* :data:`GAPS`: SymPy simplifies these and the core does not, although its
+* :data:`UNCHANGED`: the input itself, either out of scope so far (sign
+  tables, ``Abs``/``sqrt`` and principal ranges come with PR (d);
+  noncommutative factors and symbolic exponents are left alone) or not made
+  smaller by any row;
+* :data:`GAPS`: SymPy simplifies these and trigsimp does not, although its
   rows would do: strict xfails, so a fix shows up.
 """
 from __future__ import annotations
@@ -163,7 +164,7 @@ SIMPLIFIED = [
     (1/(1 + tan(x)**2), cos(x)**2),
     (1/(1 - cos(x)**2), sin(x)**-2),
     (sin(x)*cos(x)/(1 - sin(x)**2), tan(x)),
-    (cos(x)**2*tan(x), sin(x)*cos(x)),
+    (cos(x)**2*tan(x), sin(2*x)/2),                     # then the double angle (PR c)
     (sin(x)**2*cos(x)**3 + cos(x)**5, cos(x)**3),
     (sec(x)**4 - tan(x)**4, 2*tan(x)**2 + 1),
     (tan(x)**2 - sin(x)**2*tan(x)**2, sin(x)**2),       # the Pythagorean pre-pass
@@ -174,6 +175,23 @@ SIMPLIFIED = [
     (sin(x + y)**2 + cos(x + y)**2 + sinh(x), sinh(x) + 1),
     (sin(sin(x)**2 + cos(x)**2), sin(1)),
     ((sin(x)**2 + cos(x)**2)**x, 1),
+    # angle addition and double angles (PR c)
+    (sin(x + y) + sin(x - y), 2*sin(x)*cos(y)), (sin(x + y) - sin(x - y), 2*sin(y)*cos(x)),   # test_trigsimp1
+    (cos(x + y) + cos(x - y), 2*cos(x)*cos(y)), (cos(x + y) - cos(x - y), -2*sin(x)*sin(y)),
+    (sin(x)*cos(y) + cos(x)*sin(y), sin(x + y)),                                  # test_issue_4775
+    (sin(x)*cos(y) + cos(x)*sin(y) + 3, sin(x + y) + 3),
+    (sin(2)*cos(3) + sin(3)*cos(2), sin(5)), (-sin(2)*sin(3) + cos(2)*cos(3), cos(5)),   # test_issue_3210
+    (sin(2)*cos(3) - sin(3)*cos(2), -sin(1)), (sin(2)*sin(3) + cos(2)*cos(3), cos(1)),
+    (sin(2)*sin(3) + cos(2)*cos(3) + cos(2), cos(1) + cos(2)),
+    (sin(Rational(1, 50))*sin(Rational(1, 25)) + cos(Rational(1, 50))*cos(Rational(1, 25)),
+     cos(Rational(1, 50))),                                                       # test_issue_15129
+    (S.Half - cos(2*x)/2, sin(x)**2),                                             # test_fu
+    (sin(x)*cos(x), sin(2*x)/2), (2*sin(x)**2 - 1, -cos(2*x)),
+    (tan(1)*tan(2), 1/cos(2) - 1),                  # test_fu leaves it; one trigonometric function fewer
+    # hyperbolic functions (PR c): test_hyperbolic_simp, test_issue_7761
+    (sinh(x + y) + sinh(x - y), 2*sinh(x)*cosh(y)), (cosh(x + y) - cosh(x - y), 2*sinh(x)*sinh(y)),
+    (sinh(x)**2 + 1, cosh(x)**2), (cosh(x)**2 - sinh(x)**2, 1), (sinh(x)/cosh(x), tanh(x)),
+    (2*tanh(x)*cosh(x), 2*sinh(x)), (3*tanh(x)**7 - 2/coth(x)**7, tanh(x)**7),
 ]
 
 UNCHANGED = [
@@ -181,21 +199,14 @@ UNCHANGED = [
     tan(x), sec(x), csc(x), cot(x), tan(x)**2, sin(x)**4, sin(x)**2 + cos(y)**2,
     cos(x)/sin(x)**7, cos(x)/sin(x)**3, sin(x)/cos(x)**3,        # test_issue_5948, test_trigsimp_issues
     sin(x)**8 + cos(x)**8, tan(x)**2 - sin(x)**2, sin(x)**2*tan(x)**2, sin(x + y)*csc(y),
-    tan(1)*tan(2),                                               # test_fu
     cos(2)*(cos(3) + 1)**2/(cos(3) - 1)**2,                      # test_trigsimp_issues (SymPy: the same, factored)
     2**(x/2)*cos(pi*x/4)/2 + 2**(x - 1)/2,                       # test_trigsimp_issue_4032 (no trig identity)
-    # angle addition, double angles (PR (c))
-    sin(x + y) + sin(x - y), sin(x + y) - sin(x - y), cos(x + y) + cos(x - y), cos(x + y) - cos(x - y),
+    # angles: quotients of sums, which need a common denominator (no rows; SymPy gives
+    # sin(y)/(-sin(y)*tan(x) + cos(y)), tan(2*x) and tan(x/2))
     tan(x + y) - tan(x)/(1 - tan(x)*tan(y)),                     # test_trigsimp1
-    sin(x)*cos(y) + cos(x)*sin(y), sin(x)*cos(y) + cos(x)*sin(y) + 3,   # test_issue_4775
-    sin(2)*cos(3) + sin(3)*cos(2), -sin(2)*sin(3) + cos(2)*cos(3), sin(2)*cos(3) - sin(3)*cos(2),
-    sin(2)*sin(3) + cos(2)*cos(3), sin(2)*sin(3) + cos(2)*cos(3) + cos(2),          # test_issue_3210
-    sin(Rational(1, 50))*sin(Rational(1, 25)) + cos(Rational(1, 50))*cos(Rational(1, 25)),   # test_issue_15129
     tan(2*x).expand(trig=True),                                  # test_trigsimp_issue_3826
-    S.Half - cos(2*x)/2, sin(x)/2/(cos(x) + 1),                  # test_fu, test_TR2i
-    # hyperbolic functions (PR (c))
-    sinh(x + y) + sinh(x - y), cosh(x + y) - cosh(x - y), sinh(x)**2 + 1, cosh(x)**2 - sinh(x)**2,
-    sinh(x)/cosh(x), 2*tanh(x)*cosh(x), 3*tanh(x)**7 - 2/coth(x)**7, cosh(pi/4),   # test_hyperbolic_simp, issue_7761
+    sin(x)/2/(cos(x) + 1),                                       # test_TR2i
+    cosh(pi/4),                                                  # test_issue_7761
     # moduli, roots, symbolic exponents, inverse functions (PR (d))
     sqrt(sin(x)**2), cos(x) + sqrt(sin(x)**2),   # test_fu (issue 18059)
     sin(x)**y/cos(x)**y, sin(1)**y/cos(1)**y,                    # test_trigsimp_issues

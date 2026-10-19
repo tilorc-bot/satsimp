@@ -1,27 +1,41 @@
 """Which handlers serve which key, for each of trigsimp's two passes.
 
 The normalizing pass (:data:`NORMALIZE`) rewrites ``tan``, ``cot``, ``sec``
-and ``csc`` with the rule rows of :mod:`.rules.normal`, keyed by head.  The
+and ``csc`` (and their hyperbolic counterparts) with the rule rows of :mod:`.rules.normal`, keyed by head.  The
 simplifying pass (:data:`SIMPLIFY`) serves ``Add`` and ``Mul`` with one
 substitution handler (:mod:`.substitute`) over every substitution table, in
 the order listed here, under :func:`measure`; the Pythagorean pre-pass
-(:data:`PYTHAGOREAN`) the same way with the rows in ``sin`` and ``cos`` alone
-(:data:`.rules.pythagorean.SINE_COSINE`).
+(:data:`PYTHAGOREAN`) the same way with the rows in ``sin`` and ``cos``
+(``sinh`` and ``cosh``) alone (:data:`.rules.pythagorean.SINE_COSINE`).
 """
 from __future__ import annotations
 
 from typing import Any
 
-from sympy import cos, cot, csc, preorder_traversal, sec, sin, tan
+from sympy import (
+    cos,
+    cosh,
+    cot,
+    coth,
+    csc,
+    csch,
+    preorder_traversal,
+    sec,
+    sech,
+    sin,
+    sinh,
+    tan,
+    tanh,
+)
 
 from satsimp.engine.measure import size
 from satsimp.engine.rewrite import rule_handler
 
-from .rules import normal, pythagorean, quotients
+from .rules import angles, normal, pythagorean, quotients
 from .substitute import substitution_handler
 
-HEADS = (sin, cos, tan, cot, sec, csc)
-"""The trigonometric heads trigsimp counts and rewrites."""
+HEADS = (sin, cos, tan, cot, sec, csc, sinh, cosh, tanh, coth, sech, csch)
+"""The circular and hyperbolic heads trigsimp counts and rewrites."""
 
 
 def measure(e: Any) -> tuple[int, int, int]:
@@ -38,7 +52,7 @@ def _by_head(rows: list) -> dict:
     return {key: rule_handler(rs) for key, rs in keys.items()}
 
 
-SUBSTITUTIONS = quotients.SUBSTITUTIONS + pythagorean.SUBSTITUTIONS
+SUBSTITUTIONS = quotients.SUBSTITUTIONS + pythagorean.SUBSTITUTIONS + angles.SUBSTITUTIONS
 
 NORMALIZE: dict = _by_head(normal.RULES)
 

@@ -39,7 +39,15 @@ hyperbolic ones with the same tables. Three kinds of rows:
    reverses; even powers are rewritten as powers of the square
    (`-4*sin(x)**4 + 4*cos(x)**4 - 8*cos(x)**2 = -4`).
 3. **Angles** (sums of products): addition formulas in both directions,
-   `sin(u)*cos(u) = sin(2*u)/2`, `cos(u)**2 = (1 + cos(2*u))/2`.
+   `sin(u)*cos(u) = sin(2*u)/2`, `cos(u)**2 = (1 + cos(2*u))/2`. A
+   contracting row has a product on its left side and the other product of
+   the formula on its right (`sin(u)*cos(v) = sin(u + v) - cos(u)*sin(v)`),
+   so that in `sin(x)*cos(y) + cos(x)*sin(y)` the second term cancels; an
+   expanding row has a function of `u + v` (one term against the rest) or
+   of `2*u` on its left side.
+
+The hyperbolic rows are the circular ones with the signs of
+`cosh(u)**2 - sinh(u)**2 = 1` (Osborn's rule).
 
 Then the rows that need the assumptions:
 
@@ -158,7 +166,8 @@ both the SymPy fork and PyPI SymPy 1.14.0:
   in the same process, trigsimp imports no other method, and `import satsimp`
   imports no method; refine's three test trees are run as before.
 
-The core (PR b) has the first two kinds of rows and no conditional rows, so
-the fuzz runs without assumptions and the **assumptions** tests only check
+The core (PR b) has the first two kinds of rows, PR (c) the third and the
+hyperbolic rows; none of them is conditional, so the fuzz runs without
+assumptions and the **assumptions** tests only check
 that assumptions are accepted and change nothing; both grow with the rows
 that need them.
