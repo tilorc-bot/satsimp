@@ -90,9 +90,13 @@ boundary where it is:
 
 **Strict input.** `refine(expr, assumptions, strict=True)` takes facts only as Q facts.
 It raises `satsimp.AssumptionSymbolError` (a `ValueError`) naming every `Symbol`,
-`Dummy` or `Wild` declared with an assumption other than `commutative=True`, and every
-applied undefined function whose class has one. The check covers `expr` and
-`assumptions` and runs before any cache. The call then runs under the `strict`
+`Dummy`, `Wild` or `IndexedBase` declared with an assumption other than
+`commutative=True`, and every applied undefined function, or `Function` subclass
+defined outside SymPy, whose class has one. The check and the exception are
+satassume's (`satassume.sympy_api.check_strict`), so `refine` and satassume's
+`ask(..., strict=True)` reject the same input. It covers `expr` and `assumptions` and
+runs before any cache. It sees only what survives construction (`p > 0` is already
+`S.true` for a positive `p`), so build the input from plain symbols. The call then runs under the `strict`
 backend, so SymPy's `ask` is never consulted. The default is unchanged.
 
 ```python

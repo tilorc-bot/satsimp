@@ -5,7 +5,7 @@ from __future__ import annotations
 import warnings
 
 import pytest
-from sympy import Abs, Dummy, Function, Integral, Q, Symbol, Wild, exp, sin, sqrt
+from sympy import Abs, Dummy, Function, IndexedBase, Integral, Q, Symbol, Wild, exp, sin, sqrt
 
 import satsimp
 from satsimp import AssumptionSymbolError, refine
@@ -20,6 +20,25 @@ def test_exported():
     assert "AssumptionSymbolError" in satsimp.__all__
     from satsimp.engine import strict
     assert satsimp.AssumptionSymbolError is strict.AssumptionSymbolError
+    # satassume's own check, not a copy: one except catches refine's and ask's
+    import satassume.sympy_api as sa
+    assert strict.AssumptionSymbolError is sa.AssumptionSymbolError
+    assert strict.check_strict is sa.check_strict
+
+
+class _Pos(Function):
+    is_positive = True
+
+
+def test_rejects_indexed_base_and_function_subclass():
+    B = IndexedBase(Symbol("B"), positive=True)      # plain label, assumption on the base
+    with pytest.raises(AssumptionSymbolError) as e:
+        refine(Abs(B[x] + x), Q.positive(x), strict=True)
+    assert e.value.symbols == (B,)
+    with pytest.raises(AssumptionSymbolError) as e:  # a Function subclass outside SymPy
+        refine(Abs(_Pos(x)), True, strict=True)
+    assert e.value.symbols == (_Pos,)
+    check_strict(Q.real(IndexedBase("C")[x]), Abs(sin(x)))
 
 
 def test_plain_symbols_with_q_facts():
