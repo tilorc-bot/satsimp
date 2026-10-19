@@ -243,6 +243,8 @@ def _step(expr: Basic, assumptions: Any) -> tuple[Any, bool]:
         if new.is_Atom or new.func is not expr.func or new.args != tuple(args):
             return (new, True) if new != expr else (expr, False)
         expr = new
+    # SymPy's _eval_refine hooks that ask (Pow, exp, Boolean) are replaced through
+    # hooks.eval_refine; the rest are harmless (Symbol's and Predicate's return self)
     method = hooks.eval_method
     if method is not None:
         own = hooks.eval_refine.get(getattr(type(expr), method, None))
