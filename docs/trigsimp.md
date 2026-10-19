@@ -21,9 +21,11 @@ trigsimp(sin(x)/cos(x))                  # tan(x)
 trigsimp(sqrt(1 - sin(x)**2), Q.gt(x, -pi/2) & Q.lt(x, pi/2))   # cos(x)
 ```
 
-`assumptions` is a SymPy boolean of `Q` facts, as for `satsimp.refine`; the
-symbols' own assumptions (`Symbol('x', positive=True)`) are not read: what is
-assumed is said in `assumptions`. SymPy's `trigsimp` takes options
+`assumptions` is a SymPy boolean of `Q` facts, as for `satsimp.refine`. By
+default a symbol's declared assumptions (`Symbol('x', positive=True)`) count
+too, as for `refine`: SymPy's constructors evaluate with them and satassume's
+symbol template reads them. With `strict=True` they are rejected, so only
+`assumptions` is read. SymPy's `trigsimp` takes options
 (`method=`, `deep=`, `recursive=`) instead; satsimp's has none, it always
 works bottom-up through the whole expression. `strict=True` is refine's strict
 input: an input declared with assumptions raises `satsimp.AssumptionSymbolError`,

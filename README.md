@@ -128,8 +128,8 @@ trigsimp(asin(sin(x)), Q.ge(x, -pi/2) & Q.le(x, pi/2))          # x
 ```
 
 `trigsimp(expr, assumptions=True, *, strict=False)` takes `assumptions` as
-`refine` does (a boolean of `Q` facts) and has no other options; `strict=True`
-is refine's strict input (above). It returns `expr` itself unless it finds a strictly smaller
+`refine` does (a boolean of `Q` facts) and has no options besides `strict`;
+`strict=True` is refine's strict input (above). It returns `expr` itself unless it finds a strictly smaller
 equal expression, smaller meaning fewer trigonometric functions, then a smaller
 `count_ops`, then fewer `Abs`, then fewer nodes. The result equals `expr` wherever `expr` is defined; it may be
 defined at more points (`tan(x)*cos(x)` becomes `sin(x)`), never at fewer.
