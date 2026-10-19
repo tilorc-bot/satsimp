@@ -130,6 +130,8 @@ jobs:
         if: always()
       - run: python -m pytest -q -n auto --junitxml=results/refine_v3.xml tests/refine_v3 2>&1 | tee results/refine_v3.log
         if: always()
+      - run: python -m pytest -q -n auto --junitxml=results/trigsimp.xml tests/trigsimp 2>&1 | tee results/trigsimp.log
+        if: always()
       - uses: actions/upload-artifact@v4
         if: always()
         with:

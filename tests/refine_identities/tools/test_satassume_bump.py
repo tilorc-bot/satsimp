@@ -136,6 +136,7 @@ def test_report_issue(tmp_path):
     assert "| `tests/refine` | 1 failed, 1 passed in 0.52s | 1 failed, 1 passed in 0.52s |" in body
     assert "| `tests/refine_identities` | did not run | did not run |" in body
     assert "| `tests/refine_v3` | 1004 passed, 1 xfailed in 12.39s |" in body
+    assert "| `tests/trigsimp` | did not run | did not run |" in body
     assert "### Failures: 1 tests, 1 distinct messages" in body   # one test, failing under both Pythons
     assert "**1 x** `assert 1 == 2`: `tests.refine.test_a::test_bad` (Python 3.11)" in body
     assert "E       assert 1 == 2" in body
