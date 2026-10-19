@@ -15,6 +15,12 @@ another term, squared or wrapped in ``sin``), with a fixed seed.  For each:
 * the result is never larger than the input by trigsimp's measure, and
   strictly smaller when it is not the input;
 * the call terminates without tripping the engine's guard (strict mode raises).
+
+The same under assumptions on ``x`` (``0 < x < pi/2``, ``-pi/2 < x < 0``,
+``0 < x < pi``, ``x`` real) at points satisfying them, with the
+expressions also wrapped in what the conditional rows rewrite: ``Abs``,
+square roots of squares, inverse functions of functions of ``x``, quotients
+to a symbolic or fractional power.
 """
 from __future__ import annotations
 
@@ -22,8 +28,15 @@ import random
 
 import pytest
 from sympy import (
+    Abs,
     I,
+    Q,
     Rational,
+    S,
+    acos,
+    asin,
+    atan,
+    atan2,
     cos,
     cosh,
     cot,
@@ -34,6 +47,7 @@ from sympy import (
     sech,
     sin,
     sinh,
+    sqrt,
     symbols,
     tan,
     tanh,
@@ -146,3 +160,83 @@ def test_idempotent_on_its_results():
     for _ in range(40):
         r = trigsimp(random_expression(rng))
         assert trigsimp(r) == r
+
+
+# with assumptions ----------------------------------------------------------------
+
+ASSUMPTIONS = [
+    # (assumptions, how a random x satisfying them is drawn, exact x satisfying them)
+    (Q.gt(x, 0) & Q.lt(x, pi/2), lambda rng: rng.uniform(1e-6, 1.5707), [pi/6, pi/4, pi/3]),
+    (Q.gt(x, -pi/2) & Q.lt(x, 0), lambda rng: rng.uniform(-1.5707, -1e-6), [-pi/6, -pi/4, -pi/3]),
+    (Q.gt(x, 0) & Q.lt(x, pi), lambda rng: rng.uniform(1e-6, 3.1415), [pi/6, pi/2, 2*pi/3, 3*pi/4]),
+    (Q.real(x), lambda rng: rng.uniform(-6, 6), SPECIAL),
+]
+A_CHUNKS = 8
+A_PER_CHUNK = 25
+X_ARGS = [x, 2*x, x/2, -x, x + pi/2]
+
+
+def _wrapped(rng: random.Random):
+    """What a conditional row rewrites, with a function of ``x`` inside."""
+    u = rng.choice(X_ARGS)
+    f = rng.choice([sin, cos, tan, sinh, cosh])
+    inner = rng.choice([f(u), f(u) + rng.choice(COEFFS), rng.choice(COEFFS)*f(u)*rng.choice([sin, cos])(u),
+                        1 - sin(u)**2, 1 - cos(u)**2, 1 + tan(u)**2, cosh(u)**2 - 1])
+    p = rng.choice([y, S.Half, Rational(5, 2), -Rational(1, 3), y + 1])
+    return rng.choice([Abs(inner), sqrt(inner**2), sqrt(inner), 1/sqrt(inner), asin(sin(u)), acos(cos(u)),
+                       atan(tan(u)), atan2(sin(u), cos(u)), sin(u)**p/cos(u)**p, cos(u)**p/sin(u)**p,
+                       sinh(u)**p/cosh(u)**p, tan(u)**p, Abs(sin(u))*Abs(cos(u))])
+
+
+def random_assumed_expression(rng: random.Random):
+    e = sum(_wrapped(rng) if rng.random() < .6 else
+            (_term(rng) if rng.random() < .5 else _identity_piece(rng)) for _ in range(rng.randint(1, 3)))
+    if rng.random() < .15:
+        e = _wrapped(rng)*e
+    return e
+
+
+def _check_assumed(e, assumptions, draw, exact, rng: random.Random) -> list[str]:
+    with strict_loops():
+        r = trigsimp(e, assumptions)
+    problems = []
+    if measure(r) > measure(e) or (r != e and not measure(r) < measure(e)):
+        problems.append(f"not smaller: {e} -> {r} under {assumptions}")
+    for i in range(6):
+        point = {x: draw(rng), y: rng.uniform(-3, 3) if i % 2 == 0 else complex(rng.uniform(-3, 3), rng.uniform(-1, 1))}
+        ve = value(e, point)
+        if ve is None:
+            continue
+        vr = value(r, point)
+        if vr is None or not close(ve, vr, scale(e, point), rel=1e-25):
+            problems.append(f"value: {e} -> {r} under {assumptions} at {point}: {ve} vs {vr}")
+            break
+    for sx in rng.sample(exact, min(3, len(exact))):
+        point = {x: sx, y: Rational(1, 3)}
+        ve = exact_value(e, point)
+        if ve is None:
+            continue
+        vr = exact_value(r, point)
+        if vr is None or not exact_close(ve, vr):
+            problems.append(f"exact point: {e} -> {r} under {assumptions} at {point}: {ve} vs {vr}")
+            break
+    return problems
+
+
+@pytest.mark.parametrize("chunk", range(A_CHUNKS))
+def test_soundness_fuzz_with_assumptions(chunk):
+    rng = random.Random(SEED + 1000 + chunk)
+    problems = []
+    for k in range(A_PER_CHUNK):
+        assumptions, draw, exact = ASSUMPTIONS[(chunk + k) % len(ASSUMPTIONS)]
+        problems += _check_assumed(random_assumed_expression(rng), assumptions, draw, exact, rng)
+    assert not problems, "\n".join(problems)
+
+
+def test_fuzz_with_assumptions_exercises_the_conditional_rows():
+    """Most wrapped expressions are rewritten under assumptions, and fewer without."""
+    rng = random.Random(SEED + 2000)
+    exprs = [(_wrapped(rng), ASSUMPTIONS[i % len(ASSUMPTIONS)][0]) for i in range(60)]
+    assumed = sum(trigsimp(e, a) != e for e, a in exprs)
+    bare = sum(trigsimp(e) != e for e, _ in exprs)
+    assert assumed >= 30 and assumed > bare + 10, (assumed, bare)
