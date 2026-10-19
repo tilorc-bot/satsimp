@@ -3,8 +3,9 @@
 * :func:`rebuild`: ``acot``/``acoth`` rebuilt from refined children keep their
   value at 0 (issue #10, B8: SymPy's ``eval`` pulls a sign out of an argument
   that may be zero);
-* :data:`EVAL_REFINE`: satsimp's copies of SymPy's ``Pow._eval_refine`` and
-  ``exp._eval_refine``, which call SymPy's ``ask`` directly (A1).
+* :data:`EVAL_REFINE`: satsimp's copies of SymPy's ``Pow._eval_refine``,
+  ``exp._eval_refine`` and ``Boolean._eval_refine``, which call SymPy's ``ask``
+  directly (A1).
 
 Importing this module installs both (:data:`satsimp.engine.hooks.rebuild`,
 :data:`satsimp.engine.hooks.eval_refine`);
@@ -14,8 +15,9 @@ from __future__ import annotations
 
 from typing import Any
 
-from sympy import I, Pow, Q, S, acot, acoth, exp, pi
+from sympy import I, Pow, Q, S, acot, acoth, exp, false, pi, true
 from sympy.core import Basic
+from sympy.logic.boolalg import Boolean
 
 from . import upstream as _upstream
 from satsimp.engine import hooks
@@ -91,7 +93,21 @@ def _exp_eval_refine(expr: Any, assumptions: Any) -> Any:
     return None
 
 
-EVAL_REFINE = {Pow._eval_refine: _pow_eval_refine, exp._eval_refine: _exp_eval_refine}
+def _boolean_eval_refine(expr: Any, assumptions: Any) -> Any:
+    """SymPy's ``Boolean._eval_refine`` (relations, ``And``, ``Or``, ``Not``,
+    applied predicates) asking through :func:`.upstream.ask`: ``true`` or
+    ``false`` when the backend decides ``expr`` under the assumptions.  Like
+    SymPy's, it lets inconsistent assumptions raise (a case split drops such a branch)."""
+    answer = _upstream.ask(expr, assumptions)
+    if answer is True:
+        return true
+    if answer is False:
+        return false
+    return None
+
+
+EVAL_REFINE = {Pow._eval_refine: _pow_eval_refine, exp._eval_refine: _exp_eval_refine,
+               Boolean._eval_refine: _boolean_eval_refine}
 """satsimp's copies of SymPy's ``_eval_refine`` hooks that call ``ask``, by the
 SymPy method they replace (a subclass overriding the hook keeps its own).  SymPy's
 versions call SymPy's ``ask`` directly, past the backend and the per-call memo;
