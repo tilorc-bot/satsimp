@@ -29,3 +29,61 @@ exclude = ["satsimp.build*", "satsimp.tools*", "satsimp.testing*", "satsimp.meth
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+
+# The SymPy boundary (README, "SymPy boundary"): the shipped package must not reach
+# SymPy's simplification or its assumption reasoning.  CI runs only this rule
+# (`ruff check --select TID251 satsimp satrefine`; ruff's default rules report unrelated
+# findings); tools/check_sympy_boundary.py covers the method calls an import ban cannot
+# see.  A banned module bans its submodules; `from sympy import simplify` and
+# `sympy.simplify(...)` resolve to the same name.  The backend that deliberately offers
+# SymPy's `ask` (satsimp/engine/backend.py) marks those imports with `# noqa: TID251`.
+[tool.ruff.lint.per-file-ignores]
+# oracles, recorders and fixtures that compare against SymPy; not packaged
+"tests/**" = ["TID251"]
+"tools/**" = ["TID251"]
+"satsimp/tools/**" = ["TID251"]
+"satsimp/testing/**" = ["TID251"]
+"satsimp/build/**" = ["TID251"]
+# the reference handlers (handlers_v3, dev-only, not packaged)
+"satsimp/methods/refine/reference/**" = ["TID251"]
+
+[tool.ruff.lint.flake8-tidy-imports.banned-api]
+"sympy.simplify".msg = "SymPy simplification (module and function)"
+"sympy.trigsimp".msg = "SymPy simplification"
+"sympy.powsimp".msg = "SymPy simplification"
+"sympy.powdenest".msg = "SymPy simplification"
+"sympy.radsimp".msg = "SymPy simplification"
+"sympy.ratsimp".msg = "SymPy simplification"
+"sympy.combsimp".msg = "SymPy simplification"
+"sympy.gammasimp".msg = "SymPy simplification"
+"sympy.nsimplify".msg = "SymPy simplification"
+"sympy.sqrtdenest".msg = "SymPy simplification"
+"sympy.logcombine".msg = "SymPy simplification"
+"sympy.signsimp".msg = "SymPy simplification"
+"sympy.cancel".msg = "SymPy rational simplification"
+"sympy.factor".msg = "SymPy rational simplification"
+"sympy.together".msg = "SymPy rational simplification"
+"sympy.gcd".msg = "SymPy polynomial algebra"
+"sympy.minimal_polynomial".msg = "SymPy number fields"
+"sympy.minpoly".msg = "SymPy number fields"
+"sympy.solve".msg = "SymPy solvers"
+"sympy.solveset".msg = "SymPy solvers"
+"sympy.ask".msg = "SymPy's own ask: ask through satsimp.engine.backend"
+"sympy.refine".msg = "SymPy's refine reasons with SymPy's ask"
+"sympy.assumptions.ask".msg = "SymPy's own ask (import Q from sympy.assumptions; ask through satsimp.engine.backend)"
+"sympy.assumptions.refine".msg = "SymPy's refine reasons with SymPy's ask"
+"sympy.assumptions.satask".msg = "SymPy's SAT ask"
+"sympy.assumptions.lra_satask".msg = "SymPy's LRA ask"
+"sympy.assumptions.handlers".msg = "SymPy's ask handlers"
+"sympy.assumptions.sathandlers".msg = "SymPy's satask facts"
+"sympy.solvers".msg = "SymPy solvers"
+"sympy.polys.polytools.cancel".msg = "SymPy rational simplification"
+"sympy.polys.polytools.factor".msg = "SymPy rational simplification"
+"sympy.polys.polytools.together".msg = "SymPy rational simplification"
+"sympy.polys.polytools.gcd".msg = "SymPy polynomial algebra"
+"sympy.polys.cancel".msg = "SymPy rational simplification"
+"sympy.polys.factor".msg = "SymPy rational simplification"
+"sympy.polys.together".msg = "SymPy rational simplification"
+"sympy.polys.gcd".msg = "SymPy polynomial algebra"
+"sympy.polys.rationaltools".msg = "SymPy rational simplification (together)"
+"sympy.polys.numberfields".msg = "SymPy number fields"
