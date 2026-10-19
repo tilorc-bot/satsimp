@@ -20,7 +20,9 @@ sum's; a site counts only when its row's condition is provable.
 """
 from __future__ import annotations
 
-from typing import Any, Callable, Iterator
+import itertools
+from collections.abc import Callable, Iterator
+from typing import Any
 
 from sympy import Add, Integer, Mul, Pow
 from sympy.core.function import expand_multinomial
@@ -38,7 +40,7 @@ def _pattern(lhs: Any) -> list[tuple[Any, int]]:
     for factor in Mul.make_args(lhs):
         base, e = factor.as_base_exp()
         if not isinstance(e, Integer):
-            raise ValueError(f"substitution row with a non-integer exponent: {lhs}")
+            raise TypeError(f"substitution row with a non-integer exponent: {lhs}")
         out.append((base, int(e)))
     return out
 
@@ -78,13 +80,18 @@ def _sites(pattern: list, powers: dict, assumptions: Any) -> Iterator[tuple[dict
     yield from extend(0, {}, {})
 
 
-def _replaced(term: Any, lhs: Any, rhs: Any, j: int) -> Any:
-    """``term`` with ``lhs**j`` replaced by ``rhs**j``: ``rhs**j`` expanded at
-    the top and the rest of the term distributed over it as one factor, so
-    that ``(x + 1)*sin(x)**2`` gives ``(x + 1) - (x + 1)*cos(x)**2``, whose
-    terms collect with ``(x + 1)*cos(x)**2``."""
-    rest = term*Pow(lhs, -j)
-    return Add(*[rest*t for t in Add.make_args(expand_multinomial(Pow(rhs, j), deep=False))])
+def _replaced(term: Any, parts: list[tuple[Any, Any, int]]) -> Any:
+    """``term`` with each ``lhs**j`` of ``parts`` (``(lhs, rhs, j)``, on
+    distinct factors of the term) replaced by ``rhs**j``: each ``rhs**j``
+    expanded at the top, their product distributed, and the rest of the term
+    distributed over it as one factor, so that ``(x + 1)*sin(x)**2`` gives
+    ``(x + 1) - (x + 1)*cos(x)**2``, whose terms collect with
+    ``(x + 1)*cos(x)**2``.  The rest is the term divided by the left sides
+    together, so every division cancels a factor of the term (dividing a
+    sum would add a pole)."""
+    rest = term*Mul(*[Pow(lhs, -j) for lhs, _, j in parts])
+    sums = [Add.make_args(expand_multinomial(Pow(rhs, j), deep=False)) for _, rhs, j in parts]
+    return Add(*[rest*Mul(*ts) for ts in itertools.product(*sums)])
 
 
 def substitution_handler(rows: list, measure: Callable[[Any], tuple], heads: tuple) -> Callable[[Any, Any], Any]:
@@ -141,14 +148,17 @@ def _holds(cache: dict, key: Any, b: dict, cond: Any, assumptions: Any) -> bool:
 
 def _candidate(terms: list, chosen: list, lhs: Any, rhs: Any) -> Any:
     """The sum with the chosen sites replaced; of two sites in one term that
-    share a factor, the first.  ``None`` when nothing is replaced."""
-    new = list(terms)
+    share a factor, the first; the sites of one term are replaced together.
+    ``None`` when nothing is replaced."""
     used: dict = {}
+    parts: dict = {}
     for i, _, b, j in chosen:
         l, r = subst(lhs, b), subst(rhs, b)
         bases = {f.as_base_exp()[0] for f in Mul.make_args(l)}
         if used.get(i, set()) & bases:
             continue
         used.setdefault(i, set()).update(bases)
-        new[i] = _replaced(new[i], l, r, j)
-    return Add(*new) if used else None
+        parts.setdefault(i, []).append((l, r, j))
+    if not parts:
+        return None
+    return Add(*[_replaced(t, parts[i]) if i in parts else t for i, t in enumerate(terms)])
