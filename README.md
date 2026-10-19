@@ -67,15 +67,18 @@ engine and methods. What changed for a consumer:
   `import satrefine` and `satrefine.refine` still work and emit a
   `DeprecationWarning`: the `satrefine` module ships in the satsimp
   distribution as an alias that re-exports the names `satrefine` had at the
-  top level (`refine`, `ask`, `handlers_dict`, the `refine_*` handlers,
-  `HANDLERS_PACKAGE`, `DEFAULT_HANDLERS`, `HANDLERS_ENV_VAR`,
-  `handlers_package`). It will be removed in a later release. Submodules are
-  not aliased:
+  top level (`refine`, `ask`, `handlers_dict`, `HANDLERS_PACKAGE`,
+  `DEFAULT_HANDLERS`, `HANDLERS_ENV_VAR`, `handlers_package`). It will be
+  removed in a later release. The vendored SymPy handlers (`refine_abs`,
+  `refine_Pow`, ...) are no longer exported, from either module: they ask
+  SymPy's assumption system. They remain in
+  `satsimp.methods.refine.identities.compat.upstream`, for SymPy's own test
+  suite. Submodules are not aliased:
 
   | Before | Now |
   |---|---|
   | `satrefine.refine` | `satsimp.refine` |
-  | `satrefine.handlers_dict`, `satrefine.ask`, `satrefine.refine_*`, `satrefine.HANDLERS_PACKAGE` | `satsimp.methods.refine.<name>` |
+  | `satrefine.handlers_dict`, `satrefine.ask`, `satrefine.HANDLERS_PACKAGE` | `satsimp.methods.refine.<name>` |
   | `satrefine.identities.core.<module>` | `satsimp.engine.<module>` |
   | `satrefine.identities.compat.backend` | `satsimp.engine.backend` |
   | `satrefine.identities.config` | `satsimp.engine.config` (`SATSIMP_IDENTITIES`, `SATSIMP_STRICT_LOOPS`), `satsimp.methods.refine.config` (`SATSIMP_HANDLERS`) |
