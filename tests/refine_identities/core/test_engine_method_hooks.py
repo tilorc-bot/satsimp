@@ -51,10 +51,11 @@ def test_refines_hooks_are_restored():
 def test_a_method_fills_its_own_containers():
     from sympy import Abs, S
     tables: dict = {}
+    refines = hooks.generated.get("Abs")
     with hooks.installed(dispatcher=_toy(), eval_method=None, generated=tables):
         tables["Abs"] = lambda e, a: S(42)
         assert driver.refine(Abs(x)) == 42
-    assert "Abs" not in hooks.generated
+    assert hooks.generated.get("Abs") is refines
     assert refine(Abs(x), Q.positive(x)) == x
 
 
