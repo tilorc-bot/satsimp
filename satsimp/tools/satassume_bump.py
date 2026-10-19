@@ -37,7 +37,7 @@ ROOT = Path(__file__).resolve().parents[2]
 PYPROJECT = ROOT / "pyproject.toml"
 REPO = os.environ.get("SATASSUME_REPO") or "https://github.com/tilorc-bot/satassume"
 """The satassume repository (the workflow's ``SATASSUME_REPO``), for compare links."""
-TREES = ("tests/refine_identities", "tests/refine", "tests/refine_v3")
+TREES = ("tests/refine_identities", "tests/refine", "tests/refine_v3", "tests/trigsimp")
 MARKER = "<!-- satassume-bump satsimp={satsimp} satassume={satassume} -->"
 MARKER_RE = re.compile(r"<!-- satassume-bump (?:satsimp|satrefine)=(\w+) satassume=(\w+) -->")
 """Also reads the marker of a report written before the rename (``satrefine=``)."""
