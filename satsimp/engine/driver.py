@@ -50,8 +50,9 @@ symbols of unknown sign)."""
 splits_left: list[int] = [MAX_SPLITS]
 """The budget of the current top-level call (reset on entry)."""
 
-generated_handlers: dict = {}
-"""Handlers from the generated rule tables (``generated/<family>.py``), by key.
+generated_handlers: dict = hooks.base("generated")
+"""Handlers from the generated rule tables (``generated/<family>.py``), by key
+(:data:`.hooks.generated`, the dict refine's tables fill; the driver reads the hook).
 
 Tried before ``handlers_dict`` when :func:`mode` is ``"generated"``; when the
 table declines, the key's live handler runs in full (the table is a fast
@@ -104,6 +105,9 @@ _firings: list[int] = []   # a stack entry per active top-level call and explora
 
 _results: list[dict] = []  # the result cache of the active top-level call
 
+_dispatchers: list = []    # the dispatcher and hooks block of each active top-level call: a call
+                           # in another block (another method's, :func:`.hooks.installed`) is top-level
+
 state: list = []
 """Engine state a result depends on besides the node and the assumptions (a
 stack of hashable tokens: the identity handlers switched off while their
@@ -144,12 +148,14 @@ def refine(expr: Any, assumptions: Any = True) -> Any:
     contradiction must not decide between a result and a crash.  Inside the
     call the error still propagates (a case split drops an inconsistent
     branch that way)."""
-    if _calls:
+    if _calls and _dispatchers[-1][0] is hooks.dispatcher and _dispatchers[-1][1] is hooks.block():
         return _refine(expr, assumptions)
     call = _Call()
     _calls.append(call)
     _firings.append(0)
     _results.append({})
+    _dispatchers.append((hooks.dispatcher, hooks.block()))
+    saved_splits = splits_left[0]
     splits_left[0] = MAX_SPLITS
     saved_ask = hooks.dispatcher.ask
     hooks.dispatcher.ask = _memoized(saved_ask)
@@ -168,6 +174,8 @@ def refine(expr: Any, assumptions: Any = True) -> Any:
         _calls.pop()
         _firings.pop()
         _results.pop()
+        _dispatchers.pop()
+        splits_left[0] = saved_splits
         hooks.dispatcher.ask = saved_ask
     if call.tripped is None:
         return result
@@ -235,16 +243,18 @@ def _step(expr: Basic, assumptions: Any) -> tuple[Any, bool]:
         if new.is_Atom or new.func is not expr.func or new.args != tuple(args):
             return (new, True) if new != expr else (expr, False)
         expr = new
-    own = hooks.eval_refine.get(getattr(type(expr), "_eval_refine", None))
-    if own is not None or hasattr(expr, "_eval_refine"):
-        ref = own(expr, assumptions) if own is not None else expr._eval_refine(assumptions)
-        if ref is not None:
-            return ref, False
+    method = hooks.eval_method
+    if method is not None:
+        own = hooks.eval_refine.get(getattr(type(expr), method, None))
+        if own is not None or hasattr(expr, method):
+            ref = own(expr, assumptions) if own is not None else getattr(expr, method)(assumptions)
+            if ref is not None:
+                return ref, False
     handler = hooks.dispatcher.handlers_dict.get(name)
     if hooks.observer and hooks.observer[-1].tables is not None:
         generated = hooks.observer[-1].tables(name)
     else:
-        generated = generated_handlers.get(name) if mode() == "generated" else None
+        generated = hooks.generated.get(name) if mode() == "generated" else None
     new = generated(expr, assumptions) if generated is not None else None
     if new is None or new == expr:
         if handler is None:

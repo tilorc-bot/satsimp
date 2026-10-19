@@ -102,14 +102,25 @@ A method `trigsimp` would go here:
 Refine must not slow down or change: a method is imported only when used, and
 importing one registers nothing in another.
 
-What is still refine-shaped and would have to change with the second method
-(deliberately not done here, since there is no second method to test it
-against): the hooks, the dispatcher (`hooks.dispatcher`, with its `ask` and
-`handlers_dict`) and the generated-table registry (`driver.generated_handlers`)
-are one per process, and the driver calls SymPy's `_eval_refine` methods
-(through `hooks.eval_refine`). A second method in the same process needs its
-own registry and hooks, for example a small per-method context the driver
-takes (the `Refiner` object of [refine.md](refine.md#open-decisions) is one form
-of it), and `build/` needs the method as a parameter. Refine's output and speed
-are the check for that change: the three test trees, the battery comparison
-(`python -m satsimp.tools.refine_compare`) and `refine_gates.sh`.
+How a second method runs on the engine: the hooks are module attributes of
+`engine/hooks.py` that refine sets at load, so another method runs the driver
+inside `hooks.installed(dispatcher=..., ...)`, which sets every hook for the
+block (its own `ask` and `handlers_dict` on the dispatcher, its own generated
+tables in `hooks.generated`, `eval_method=None` to skip SymPy's `_eval_refine`
+methods; what it does not name is the hook's default) and restores refine's
+after it. A driver call under another dispatcher is a top-level call of its
+own (its own result cache, firing counts and split budget), even when it is
+made from inside a refine call or uses refine's dispatcher; what it does share with that call is
+the generated-table mode (`SATSIMP_IDENTITIES`, `driver.live()`) and whether a
+case split is exploring (no split is tried then). Inside a block, everything,
+`satsimp.refine` included, runs on the block's hooks: a method does not call
+another method there. A method sets its hooks at load with `hooks.plug(name=...)`
+and fills containers in place on `hooks.base(name)`; both write outside every
+block, so a method first imported inside one leaves the block's hooks alone
+and works after it (a hook rebound directly inside a block raises
+`RuntimeError` when the block ends). Refine's registries and settings are never read
+or changed by it; the check is refine's output and speed: the three test
+trees, the battery comparison (`python -m satsimp.tools.refine_compare`) and
+`refine_gates.sh`. Still refine-shaped: `build/` (table generation and
+verification) takes refine's families, so a method's generated tables need the
+method as a parameter there first.

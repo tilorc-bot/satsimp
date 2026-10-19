@@ -6,5 +6,4 @@ from satsimp.engine import hooks as _hooks
 from satsimp.engine import backend as _backend
 from . import upstream as _upstream
 
-_hooks.dispatcher = _upstream
-_hooks.ask_whole = _backend.ask_whole
+_hooks.plug(dispatcher=_upstream, ask_whole=_backend.ask_whole)
