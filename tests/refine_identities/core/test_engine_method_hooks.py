@@ -68,6 +68,7 @@ def test_a_call_from_inside_refine_is_its_own_top_level_call():
         return expr.args[0]
 
     handlers_dict["Probe"] = probe
+    budget = driver.splits_left[0]
     try:
         assert refine(Probe(log(x)), Q.negative(x)) == refine(log(x), Q.negative(x))
     finally:
@@ -76,7 +77,7 @@ def test_a_call_from_inside_refine_is_its_own_top_level_call():
     assert not driver._calls and not driver._dispatchers
     assert upstream.ask is not None and not hasattr(upstream.ask, "__wrapped__")
     assert upstream.ask.__name__ != "memo_ask"                                # refine's ask restored
-    assert driver.splits_left[0] == driver.MAX_SPLITS
+    assert driver.splits_left[0] == budget    # each top-level call restores the budget it found
 
 
 _LOADED_INSIDE = """
