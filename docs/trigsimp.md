@@ -25,7 +25,9 @@ trigsimp(sqrt(1 - sin(x)**2), Q.gt(x, -pi/2) & Q.lt(x, pi/2))   # cos(x)
 symbols' own assumptions (`Symbol('x', positive=True)`) are not read: what is
 assumed is said in `assumptions`. SymPy's `trigsimp` takes options
 (`method=`, `deep=`, `recursive=`) instead; satsimp's has none, it always
-works bottom-up through the whole expression.
+works bottom-up through the whole expression. `strict=True` is refine's strict
+input: an input declared with assumptions raises `satsimp.AssumptionSymbolError`,
+and the call runs under the `strict` backend (satassume only).
 
 ## Scope of the first version
 

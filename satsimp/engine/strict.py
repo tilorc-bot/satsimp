@@ -1,4 +1,5 @@
-"""Strict input: facts only as Q facts (``satsimp.refine(..., strict=True)``).
+"""Strict input: facts only as Q facts (``satsimp.refine(..., strict=True)``,
+``satsimp.trigsimp(..., strict=True)``).
 
 By default the assumptions a symbol was declared with count: SymPy's
 constructors evaluate with them before refine sees the input (for a positive
