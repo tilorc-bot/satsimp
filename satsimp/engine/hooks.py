@@ -1,7 +1,7 @@
 """Every way a method (or offline code) plugs into the engine: plain module attributes.
 
-The engine reads them at call time (``hooks.name``), so whoever sets one does so
-once, at load, by assignment or in place.  Nothing in the engine names a specific
+The engine reads them at call time (``hooks.name``); a method sets them once, at
+load, with :func:`plug` (by name) or in place on :func:`base` (a container).  Nothing in the engine names a specific
 SymPy function; what it needs to know about particular heads is a role here.
 The hooks are process-wide, and today one method sets them: refine, as listed
 below (``docs/architecture.md``, "Adding a method").
@@ -31,6 +31,15 @@ Set by :mod:`satsimp.methods.refine.identities.compat.sympy_fixes`:
 :data:`eval_refine`
     SymPy ``_eval_refine`` method -> the copy the driver calls instead (a
     subclass overriding the method keeps its own).
+:data:`eval_method`
+    the name of the SymPy method the driver calls on a node before its
+    handler (``"_eval_refine"``, the default; ``None``: none).
+
+Filled by refine's generated tables (``generated/__init__.py``):
+
+:data:`generated`
+    key -> handler from the generated rule tables, tried before the
+    dispatcher's handler (``driver.generated_handlers`` is this dict).
 
 Set by :mod:`satsimp.methods.refine.identities.compat.matrix_match`:
 
@@ -75,10 +84,17 @@ Pushed by offline code (:mod:`satsimp.build`) through :func:`.driver.observing`:
     ``on_fire(kind, row)`` is called on each table-row firing (``kind``
     ``"rule"`` or ``"identity"``), and its ``tables(key)``, when set, gives the
     generated table the driver uses for ``key`` (``None``: none), whatever the mode.
+
+Another method runs the engine with hooks of its own: :func:`installed` sets
+every hook for a block and restores refine's (the values set at load) after
+it, so refine's settings and registries are neither read nor changed by it.
+A method imported inside such a block still sets its hooks outside it
+(:func:`plug`, :func:`base`).
 """
 from __future__ import annotations
 
-from typing import Any, Callable, NamedTuple
+from contextlib import contextmanager
+from typing import Any, Callable, Iterator, NamedTuple
 
 from sympy.core import Add, Mul
 from sympy.core.operations import LatticeOp
@@ -98,6 +114,8 @@ def rebuild(func: Any, args: Any, assumptions: Any) -> Any:
 
 
 eval_refine: dict = {}
+eval_method: str | None = "_eval_refine"
+generated: dict = {}
 
 match: list = []
 non_scalar: tuple = ()
@@ -124,3 +142,74 @@ class Observer(NamedTuple):
 
 
 observer: list[Observer] = []
+
+
+def _defaults() -> dict[str, Any]:
+    """Every hook's value before any method sets it (new containers on each call)."""
+    return {
+        "dispatcher": None, "ask_whole": ask_whole_default, "rebuild": rebuild_default,
+        "eval_refine": {}, "eval_method": "_eval_refine", "generated": {},
+        "match": [], "non_scalar": (), "commutative": (Add, Mul, LatticeOp),
+        "fallback": {}, "own_args": set(), "opaque": (), "conditional": None,
+        "modulus": None, "step": None, "two_valued": two_valued_default, "observer": [],
+    }
+
+
+ask_whole_default, rebuild_default, two_valued_default = ask_whole, rebuild, two_valued
+
+
+_outside: list[dict] = []
+"""The hooks each active :func:`installed` block restores after it, outermost
+first: ``_outside[0]`` is what holds outside every block."""
+
+
+def base(name: str) -> Any:
+    """Hook ``name`` as it is outside every :func:`installed` block: the container a
+    method fills at load (in place), whether or not it is imported inside one."""
+    return _outside[0][name] if _outside else globals()[name]
+
+
+def plug(**values: Any) -> None:
+    """Set hooks (by name) at load: outside every :func:`installed` block, so a
+    method imported inside one sets them for afterwards, and the block goes on
+    with its own."""
+    unknown = set(values) - set(_defaults())
+    if unknown:
+        raise TypeError(f"unknown hooks: {sorted(unknown)}")
+    (_outside[0] if _outside else globals()).update(values)
+
+
+def block() -> Any:
+    """A token of the innermost active :func:`installed` block (``None`` outside every block)."""
+    return _outside[-1] if _outside else None
+
+
+@contextmanager
+def installed(**values: Any) -> Iterator[None]:
+    """Run the block with these hooks (by name), every other hook at its
+    default, and restore the hooks as they were after it: how a method other
+    than refine runs the engine (``docs/architecture.md``).
+
+    A method plugs in at load through :func:`plug` and :func:`base`, which
+    set the hooks outside every block: a method first imported inside one
+    (refine, there) leaves the block's hooks alone and works after it.  A hook
+    rebound directly inside the block (``hooks.name = ...``) would be lost:
+    :class:`RuntimeError`."""
+    fresh = _defaults()
+    unknown = set(values) - set(fresh)
+    if unknown:
+        raise TypeError(f"unknown hooks: {sorted(unknown)}")
+    fresh.update(values)
+    module = globals()
+    saved = {name: module[name] for name in fresh}
+    _outside.append(saved)
+    module.update(fresh)
+    try:
+        yield
+    finally:
+        rebound = sorted(name for name in fresh if module[name] is not fresh[name])
+        _outside.pop()
+        module.update(saved)
+    if rebound:
+        raise RuntimeError(f"hooks {rebound} were rebound inside an installed() block; "
+                           "a method sets its hooks with hooks.plug() and hooks.base()")

@@ -159,11 +159,8 @@ def install(handlers_dict: dict) -> None:
     the keys still gets them after its own table declines, and ``Piecewise``'s
     handler; and set the head roles of :mod:`satsimp.engine.hooks` the engine reads."""
     from satsimp.engine import hooks
-    hooks.own_args.add("Piecewise")
+    hooks.base("own_args").add("Piecewise")
     handlers_dict["Piecewise"] = refine_piecewise
-    hooks.fallback.update({"floor": floor_of_bounded, "ceiling": floor_of_bounded, "Piecewise": refine_piecewise})
-    hooks.opaque = (floor, im, arg)
-    hooks.conditional = Piecewise
-    hooks.modulus = Abs
-    hooks.step = floor
-    hooks.two_valued = floor_two_valued
+    hooks.base("fallback").update({"floor": floor_of_bounded, "ceiling": floor_of_bounded, "Piecewise": refine_piecewise})
+    hooks.plug(opaque=(floor, im, arg), conditional=Piecewise, modulus=Abs, step=floor,
+               two_valued=floor_two_valued)
