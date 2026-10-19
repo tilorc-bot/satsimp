@@ -2,7 +2,8 @@
 
 Every refine handler asks predicate questions through
 :func:`satsimp.methods.refine.identities.compat.upstream.ask`, which delegates to the backend selected
-here.  Three backends exist:
+here.  Five backends exist; ``strict`` and ``satassume`` never ask SymPy,
+``combined`` (the default), ``union`` and ``sympy`` do:
 
 ``sympy``
     SymPy's own :func:`sympy.assumptions.ask.ask`.  The reference: the
@@ -15,6 +16,13 @@ here.  Three backends exist:
     the engine: a refine test that passes under ``sympy`` and fails here is
     a satassume gap.  Assumptions that contradict a symbol's declared facts
     raise :class:`satassume.InconsistentAssumptions`, as the engine does.
+``strict``
+    satassume only, routed as ``combined`` is (:func:`route`) but with no
+    SymPy fallback: a query satassume has no model of (matrix or custom
+    predicates, a relation it cannot translate), leaves undecided or fails on
+    is ``None``; inconsistent assumptions raise ``ValueError`` as under
+    ``combined``.  The backend for running satsimp without SymPy's
+    assumption system: nothing SymPy's ``ask`` would decide reaches a rewrite.
 ``combined`` (the default)
     satassume, with SymPy's ``ask`` asked only where satassume has no model
     of the query (see "Routing" below).  While it asks SymPy, three of SymPy's
@@ -87,7 +95,7 @@ from . import config
 
 Ask = Callable[..., "bool | None"]
 
-BACKENDS = ("sympy", "satassume", "combined", "union")
+BACKENDS = ("sympy", "satassume", "combined", "union", "strict")
 DEFAULT = "combined"
 ENV_VAR = "SATSIMP_BACKEND"
 
@@ -449,11 +457,19 @@ def _combined_ask(proposition: Any, assumptions: Any = True) -> bool | None:
     return _guarded_sympy_ask(proposition, assumptions)
 
 
+def _strict_ask(proposition: Any, assumptions: Any = True) -> bool | None:
+    answer, reason = route(proposition, assumptions)
+    if reason == "inconsistent":
+        raise ValueError(f"inconsistent assumptions {assumptions}")
+    return answer
+
+
 _IMPLEMENTATIONS: dict[str, Ask] = {
     "sympy": _sympy_ask,
     "satassume": _satassume_ask,
     "combined": _combined_ask,
     "union": _union_ask,
+    "strict": _strict_ask,
 }
 
 
@@ -473,14 +489,14 @@ def current() -> str:
 
 def ask_whole(condition: Any, assumptions: Any = True) -> bool | None:
     """satassume's answer to a compound ``condition`` (:data:`.hooks.ask_whole`),
-    under the ``satassume`` and ``combined`` backends, which split cases; else
+    under the ``satassume``, ``combined`` and ``strict`` backends, which split cases; else
     ``None``.  ``None`` too where ``combined`` would ask SymPy (:func:`route`
     gives a reason): SymPy does not split cases and calls an ``Or`` true under
     inconsistent assumptions, which made rows fire (issue #18).  Remembered
     per backend selection and satassume state (:func:`_satassume_state`),
     as satassume's own answer memo is: the engine asks the same ``Or`` again
     for each row and pass that states it."""
-    if _current not in ("satassume", "combined"):
+    if _current not in ("satassume", "combined", "strict"):
         return None
     state = _satassume_state()
     if _whole_state[0] != state:
