@@ -142,9 +142,10 @@ def refine(expr: Any, assumptions: Any = True, *, strict: bool = False) -> Any:
     """Refine ``expr`` under ``assumptions`` with the handlers in ``handlers_dict``.
 
     ``strict=True`` takes facts only as Q facts and keeps SymPy's assumption
-    system out: a symbol (``Symbol``, ``Dummy``, ``Wild``) declared with an
-    assumption other than ``commutative=True``, or an applied undefined function
-    whose class has one, in ``expr`` or ``assumptions`` raises
+    system out: a symbol (``Symbol``, ``Dummy``, ``Wild``) or ``IndexedBase``
+    declared with an assumption other than ``commutative=True``, or an applied
+    undefined function (or ``Function`` subclass defined outside SymPy) whose
+    class has one, in ``expr`` or ``assumptions`` raises
     :class:`.strict.AssumptionSymbolError` (a ``ValueError``; checked before any
     cache is consulted), and the call runs under the ``strict`` backend
     (:mod:`.backend`: satassume only, never SymPy's ``ask``).  Off by default.

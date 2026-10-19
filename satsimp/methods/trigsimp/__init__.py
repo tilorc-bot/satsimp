@@ -86,12 +86,23 @@ def _run(handlers: dict, expr: Any, assumptions: Any, ask: Any) -> Any:
         return driver.refine(expr, assumptions)  # boundary: satsimp's own driver
 
 
-def trigsimp(expr: Any, assumptions: Any = True) -> Any:
+def trigsimp(expr: Any, assumptions: Any = True, *, strict: bool = False) -> Any:
     """Simplify the trigonometric functions in ``expr`` under ``assumptions``
     (a boolean of ``Q`` facts): the result equals ``expr`` wherever ``expr``
     is defined and the assumptions hold, and it is ``expr`` itself unless it is
-    smaller (fewer trigonometric functions, then fewer operations)."""
+    smaller (fewer trigonometric functions, then fewer operations).
+
+    ``strict=True`` is ``refine``'s: facts only as Q facts, so input declared
+    with assumptions raises :class:`satsimp.AssumptionSymbolError` (a
+    ``ValueError``; :mod:`satsimp.engine.strict`) before anything else, and the
+    call runs under the ``strict`` backend (satassume only, never SymPy's
+    ``ask``).  Off by default."""
     expr = sympify(expr)
+    if strict:
+        from satsimp.engine.strict import check_strict
+        check_strict(expr, assumptions)
+        with backend.using("strict"):
+            return trigsimp(expr, assumptions)
     if not isinstance(expr, Basic) or not expr.has(*HEADS):
         return expr
     ask = _asker({})
