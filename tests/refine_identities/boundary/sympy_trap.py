@@ -50,8 +50,6 @@ MODE = os.environ.get("SYMPY_TRAP_MODE", "raise")
 #: for a path the corpus reaches (satassume's list also has the arithmetic operators'
 #: decorators, ``sympy.core.decorators._func`` and friends).
 CONSTRUCTION = {
-    # cached constructors and evaluation (Add, Mul, Pow and the functions go through cacheit)
-    "sympy.core.cache.wrapper": "a cached constructor (cacheit)",
     # abs(e) is Abs(e)
     "sympy.core.expr.__abs__": "abs() builds Abs",
     # substitution rebuilds every changed node with func(*args)
@@ -130,6 +128,15 @@ def allowed(name: str, entry: str | None, caller: str) -> str | None:
     return None
 
 
+_CACHE = os.path.join("sympy", "core", "cache.py")
+
+
+def _cache_wrapper(f) -> bool:
+    """``f`` is the wrapper :func:`sympy.core.cache.cacheit` puts around a function
+    (``Mul.__new__``, but also ``Expr.as_leading_term``, ``Basic._subs``, ...)."""
+    return f.f_code.co_name == "wrapper" and f.f_code.co_filename.endswith(_CACHE)
+
+
 def _site(start: int) -> tuple:
     """``(site, entry)`` of the innermost package frame above ``start``."""
     f = sys._getframe(start)
@@ -139,8 +146,8 @@ def _site(start: int) -> tuple:
         if fn.startswith(PKG) and not fn.startswith(OUTSIDE):
             entry = below and f"{below.f_globals.get('__name__', '?')}.{below.f_code.co_name}"
             return f"{_short(fn)}:{f.f_lineno} {f.f_code.co_name}", entry
-        if fn != _HERE:
-            below = f
+        if fn != _HERE and not _cache_wrapper(f):
+            below = f    # cacheit's wrapper is skipped: the entry is the cached function itself
         f = f.f_back
     return None, None
 

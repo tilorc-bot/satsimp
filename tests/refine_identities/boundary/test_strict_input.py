@@ -107,3 +107,24 @@ def test_satrefine_alias():
     assert satrefine.refine(Abs(x), Q.positive(x), strict=True) == x
     with pytest.raises(AssumptionSymbolError):
         satrefine.refine(Abs(Symbol("p", positive=True)), strict=True)
+
+
+def test_a_strict_call_inside_a_refine_call_shares_nothing_with_it():
+    """``strict=True`` from a handler is its own top-level call: it neither reuses
+    the outer call's (SymPy-backed) answers nor leaves its own for the outer call."""
+    from sympy import Function, MatrixSymbol, S, Tuple
+    from satsimp.methods.refine.identities.compat.upstream import handlers_dict
+
+    class Probe(Function):
+        pass
+
+    X = MatrixSymbol("X", 3, 3)
+    q, a = Q.invertible(X), Q.orthogonal(X)
+    handlers_dict["Probe"] = lambda e, assumptions: satsimp.refine(q, assumptions, strict=True)
+    try:
+        assert satsimp.refine(q, a) is S.true                              # combined: SymPy decides it
+        assert satsimp.refine(q, a, strict=True) == q                      # strict: satassume alone
+        assert tuple(satsimp.refine(Tuple(q, Probe(X)), a)) == (S.true, q)
+        assert tuple(satsimp.refine(Tuple(Probe(X), q), a)) == (q, S.true)
+    finally:
+        del handlers_dict["Probe"]

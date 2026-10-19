@@ -106,8 +106,9 @@ _firings: list[int] = []   # a stack entry per active top-level call and explora
 
 _results: list[dict] = []  # the result cache of the active top-level call
 
-_dispatchers: list = []    # the dispatcher and hooks block of each active top-level call: a call
-                           # in another block (another method's, :func:`.hooks.installed`) is top-level
+_dispatchers: list = []    # the dispatcher, hooks block and backend of each active top-level call: a
+                           # call in another block (another method's, :func:`.hooks.installed`) or
+                           # under another backend (``strict=True`` inside a call) is top-level
 
 state: list = []
 """Engine state a result depends on besides the node and the assumptions (a
@@ -133,6 +134,7 @@ def _memoized(ask: Any) -> Any:
         answer = ask(proposition, assumptions)
         cache[key] = answer
         return answer
+    memo_ask.unmemoized = ask   # a nested top-level call memoizes this, not the outer call's memo
     return memo_ask
 
 
@@ -157,23 +159,25 @@ def refine(expr: Any, assumptions: Any = True, *, strict: bool = False) -> Any:
     contradiction must not decide between a result and a crash.  Inside the
     call the error still propagates (a case split drops an inconsistent
     branch that way)."""
+    from . import backend
     if strict:
-        from . import backend
         from .strict import check_strict
         check_strict(expr, assumptions)
         with backend.using("strict"):
             return refine(expr, assumptions)
-    if _calls and _dispatchers[-1][0] is hooks.dispatcher and _dispatchers[-1][1] is hooks.block():
+    context = (hooks.dispatcher, hooks.block(), backend.current())
+    if _calls and _dispatchers[-1][0] is context[0] and _dispatchers[-1][1] is context[1] \
+            and _dispatchers[-1][2] == context[2]:
         return _refine(expr, assumptions)
     call = _Call()
     _calls.append(call)
     _firings.append(0)
     _results.append({})
-    _dispatchers.append((hooks.dispatcher, hooks.block()))
+    _dispatchers.append(context)
     saved_splits = splits_left[0]
     splits_left[0] = MAX_SPLITS
     saved_ask = hooks.dispatcher.ask
-    hooks.dispatcher.ask = _memoized(saved_ask)
+    hooks.dispatcher.ask = _memoized(getattr(saved_ask, "unmemoized", saved_ask))
     try:
         result = _refine(expr, assumptions)
     except RecursionError as error:          # RefineLoopError, or Python's own limit

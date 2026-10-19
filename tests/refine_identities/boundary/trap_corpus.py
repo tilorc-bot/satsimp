@@ -63,6 +63,14 @@ def main() -> None:
         canary["raised"] = "TrapError"
     canary["recorded"] = any(ev["site"].endswith("_trap_canary.py:2 <module>")
                              for ev in sympy_trap.EVENTS.values())
+    # a cached SymPy method (cacheit's wrapper) that simplifies is not construction
+    probe = compile("import sympy\nx = sympy.Symbol('x')\n(sympy.cos(x)**2 + sympy.sin(x)**2).as_leading_term(x)\n",
+                    os.path.join(dirs[0], "_trap_canary_cached.py"), "exec")
+    try:
+        exec(probe, {})
+        canary["cached"] = None
+    except sympy_trap.TrapError:
+        canary["cached"] = "TrapError"
     sympy_trap.EVENTS.clear()
 
     spec = importlib.util.spec_from_file_location("battery", root / "tests" / "refine_identities" / "battery_v3.py")
