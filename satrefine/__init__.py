@@ -2,8 +2,7 @@
 
 ``import satrefine`` and ``satrefine.refine`` keep working for now, with a
 ``DeprecationWarning``: this module re-exports the top-level names it had
-(``refine``, ``ask``, ``handlers_dict``, the upstream ``refine_*`` handlers,
-``HANDLERS_PACKAGE``, ``DEFAULT_HANDLERS``, ``HANDLERS_ENV_VAR``,
+(``refine``, ``ask``, ``handlers_dict``, ``HANDLERS_PACKAGE``, ``DEFAULT_HANDLERS``, ``HANDLERS_ENV_VAR``,
 ``handlers_package``) from
 :mod:`satsimp.methods.refine`.  Use ``from satsimp import refine`` instead.
 Submodules (``satrefine.identities...``, ``satrefine.tools...``) are not

@@ -5,7 +5,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from sympy import And, Dummy, I, Q, S, count_ops, nan, simplify, zoo
+from sympy import And, Dummy, I, Q, S, count_ops, nan, zoo
 
 from . import driver as _dispatch
 from . import hooks
@@ -64,7 +64,8 @@ def _in_every_case(e: Any, assumptions: Any, branches: list, opaque: tuple) -> l
 
 
 def _agree_at(expr: Any, cand: Any, point: dict, assumptions: Any) -> bool:
-    """Whether ``expr`` and ``cand`` agree at ``point``, by evaluation, refinement, or simplification."""
+    """Whether ``expr`` and ``cand`` agree at ``point``, by evaluation or refinement (compared
+    with :func:`_same`: equal, or equal after expansion)."""
     try:
         left, right = expr.xreplace(point), cand.xreplace(point)
     except (ArithmeticError, ValueError, TypeError):   # undefined there (Rem(a, 0) raises): no agreement
@@ -75,14 +76,7 @@ def _agree_at(expr: Any, cand: Any, point: dict, assumptions: Any) -> bool:
         left, right = _explore(left, assumptions), _explore(right, assumptions)
     except ValueError:
         return False
-    if _same(left, right):
-        return True
-    if left.has(nan, zoo) or right.has(nan, zoo):
-        return False
-    try:
-        return simplify(left - right) == 0
-    except Exception:  # noqa: BLE001
-        return False
+    return _same(left, right)
 
 
 _real_part_dummies: dict = {}
