@@ -106,8 +106,9 @@ def _boolean_eval_refine(expr: Any, assumptions: Any) -> Any:
     return None
 
 
+# boundary: keys only, the SymPy hooks that ask, replaced by the copies above
 EVAL_REFINE = {Pow._eval_refine: _pow_eval_refine, exp._eval_refine: _exp_eval_refine,
-               Boolean._eval_refine: _boolean_eval_refine}
+               Boolean._eval_refine: _boolean_eval_refine}  # boundary: a key, as above
 """satsimp's copies of SymPy's ``_eval_refine`` hooks that call ``ask``, by the
 SymPy method they replace (a subclass overriding the hook keeps its own).  SymPy's
 versions call SymPy's ``ask`` directly, past the backend and the per-call memo;

@@ -34,3 +34,17 @@ jobs:
       - run: python -m pytest -q -n auto tests/refine_v3
         if: always()
         env: {PYTHONHASHSEED: "0"}
+  boundary:
+    # the static SymPy boundary checks (README, "SymPy boundary"); the runtime trap is
+    # tests/refine_identities/boundary, run by the test job on both SymPy versions
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install ruff==0.16.7
+      - name: ruff (TID251, the import bans of pyproject.toml)
+        run: ruff check --select TID251 --output-format=github satsimp satrefine
+      - name: method calls that leave the boundary
+        run: python tools/check_sympy_boundary.py

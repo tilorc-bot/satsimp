@@ -40,6 +40,7 @@ from . import config
 from . import hooks
 from .guard import (MAX_CALL_FIRINGS, MAX_DEPTH, MAX_FIRINGS, MAX_TOTAL_FIRINGS, RefineLoopError,  # noqa: F401
                     _Call, _short, loop_events, pushed, strict, strict_loops)
+from .guard import strict as strict_loops_on   # refine's own ``strict`` is its strict-input flag
 
 MAX_SPLITS = 8
 """Case splits (:func:`.split.case_split`) tried in one top-level call: each
@@ -105,8 +106,9 @@ _firings: list[int] = []   # a stack entry per active top-level call and explora
 
 _results: list[dict] = []  # the result cache of the active top-level call
 
-_dispatchers: list = []    # the dispatcher and hooks block of each active top-level call: a call
-                           # in another block (another method's, :func:`.hooks.installed`) is top-level
+_dispatchers: list = []    # the dispatcher, hooks block and backend of each active top-level call: a
+                           # call in another block (another method's, :func:`.hooks.installed`) or
+                           # under another backend (``strict=True`` inside a call) is top-level
 
 state: list = []
 """Engine state a result depends on besides the node and the assumptions (a
@@ -132,15 +134,24 @@ def _memoized(ask: Any) -> Any:
         answer = ask(proposition, assumptions)
         cache[key] = answer
         return answer
+    memo_ask.unmemoized = ask   # a nested top-level call memoizes this, not the outer call's memo
     return memo_ask
 
 
-def refine(expr: Any, assumptions: Any = True) -> Any:
+def refine(expr: Any, assumptions: Any = True, *, strict: bool = False) -> Any:
     """Refine ``expr`` under ``assumptions`` with the handlers in ``handlers_dict``.
+
+    ``strict=True`` takes facts only as Q facts and keeps SymPy's assumption
+    system out: a symbol (``Symbol``, ``Dummy``, ``Wild``) declared with an
+    assumption other than ``commutative=True``, or an applied undefined function
+    whose class has one, in ``expr`` or ``assumptions`` raises
+    :class:`.strict.AssumptionSymbolError` (a ``ValueError``; checked before any
+    cache is consulted), and the call runs under the ``strict`` backend
+    (:mod:`.backend`: satassume only, never SymPy's ``ask``).  Off by default.
 
     For the duration of a top-level call the dispatcher's ``ask`` is memoized.  The
     call always terminates; when a termination guard trips it returns ``expr``
-    unchanged, or raises :class:`RefineLoopError` if :func:`strict` (see
+    unchanged, or raises :class:`RefineLoopError` if :func:`.guard.strict` (see
     *Termination* in :mod:`.guard`).  When ``ask`` raises on
     inconsistent assumptions (a ``ValueError`` saying so, as SymPy's backend
     does), ``expr`` is returned unchanged: every result is correct then, and
@@ -148,17 +159,25 @@ def refine(expr: Any, assumptions: Any = True) -> Any:
     contradiction must not decide between a result and a crash.  Inside the
     call the error still propagates (a case split drops an inconsistent
     branch that way)."""
-    if _calls and _dispatchers[-1][0] is hooks.dispatcher and _dispatchers[-1][1] is hooks.block():
+    from . import backend
+    if strict:
+        from .strict import check_strict
+        check_strict(expr, assumptions)
+        with backend.using("strict"):
+            return refine(expr, assumptions)
+    context = (hooks.dispatcher, hooks.block(), backend.current())
+    if _calls and _dispatchers[-1][0] is context[0] and _dispatchers[-1][1] is context[1] \
+            and _dispatchers[-1][2] == context[2]:
         return _refine(expr, assumptions)
     call = _Call()
     _calls.append(call)
     _firings.append(0)
     _results.append({})
-    _dispatchers.append((hooks.dispatcher, hooks.block()))
+    _dispatchers.append(context)
     saved_splits = splits_left[0]
     splits_left[0] = MAX_SPLITS
     saved_ask = hooks.dispatcher.ask
-    hooks.dispatcher.ask = _memoized(saved_ask)
+    hooks.dispatcher.ask = _memoized(getattr(saved_ask, "unmemoized", saved_ask))
     try:
         result = _refine(expr, assumptions)
     except RecursionError as error:          # RefineLoopError, or Python's own limit
@@ -179,7 +198,7 @@ def refine(expr: Any, assumptions: Any = True) -> Any:
         hooks.dispatcher.ask = saved_ask
     if call.tripped is None:
         return result
-    if strict():
+    if strict_loops_on():
         raise RefineLoopError(call.tripped) from cause
     loop_events.append((expr, call.tripped))
     return expr
@@ -243,6 +262,8 @@ def _step(expr: Basic, assumptions: Any) -> tuple[Any, bool]:
         if new.is_Atom or new.func is not expr.func or new.args != tuple(args):
             return (new, True) if new != expr else (expr, False)
         expr = new
+    # SymPy's _eval_refine hooks that ask (Pow, exp, Boolean) are replaced through
+    # hooks.eval_refine; the rest are harmless (Symbol's and Predicate's return self)
     method = hooks.eval_method
     if method is not None:
         own = hooks.eval_refine.get(getattr(type(expr), method, None))

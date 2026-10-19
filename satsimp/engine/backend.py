@@ -101,7 +101,7 @@ ENV_VAR = "SATSIMP_BACKEND"
 
 
 def _sympy_ask(proposition: Any, assumptions: Any = True) -> bool | None:
-    from sympy.assumptions.ask import ask
+    from sympy.assumptions.ask import ask  # noqa: TID251 (the sympy backend: SymPy's ask is the point)
     return ask(proposition, assumptions)
 
 
@@ -143,9 +143,9 @@ def _handler_ask() -> Ask:
     global ones) is the same choice there.  Resolved once.
     """
     try:
-        from sympy.assumptions.ask import _ask_recursive
+        from sympy.assumptions.ask import _ask_recursive  # noqa: TID251 (guards of SymPy's handlers, combined/union only)
     except ImportError:  # SymPy 1.14 and earlier
-        from sympy.assumptions.ask import ask
+        from sympy.assumptions.ask import ask  # noqa: TID251 (guards of SymPy's handlers, combined/union only)
         return ask
     return _ask_recursive
 
