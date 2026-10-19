@@ -187,11 +187,11 @@ SIMPLIFIED = [
      cos(Rational(1, 50))),                                                       # test_issue_15129
     (S.Half - cos(2*x)/2, sin(x)**2),                                             # test_fu
     (sin(x)*cos(x), sin(2*x)/2), (2*sin(x)**2 - 1, -cos(2*x)),
-    # the sum decides whether a term becomes a sum: a product and its sum measured
-    # apart disagree, and the driver would rewrite back and forth (review of PR c)
-    (1/sinh(x/2) - cosh(2*x) + 1, 1/sinh(x/2) - 2*sinh(x)**2),
-    (y/sinh(x/2) - cosh(2*x) + 1, y/sinh(x/2) - 2*sinh(x)**2),
-    (1/sin(x/2) - cos(2*x) + 1, 1/sin(x/2) + 2*sin(x)**2),
+    # inputs that tripped the loop guard in review (UNCHANGED has more): a sum is measured
+    # in the sign an odd function keeps, and a product is rewritten only into a product
+    (1/sin(x/2) - cos(2*x) + 1, 1/sin(x/2) + 2*sin(x)**2), (y/sinh(x/2) - cosh(2*x) + 1, y/sinh(x/2) - 2*sinh(x)**2),
+    (sin(1 - cos(2*x) + cot(x)), sin(2*sin(x)**2 + cot(x))),
+    (sin(y/sinh(x/2) - cosh(2*x) + 1), sin(y/sinh(x/2) - 2*sinh(x)**2)),
     # hyperbolic functions (PR c): test_hyperbolic_simp, test_issue_7761
     (sinh(x + y) + sinh(x - y), 2*sinh(x)*cosh(y)), (cosh(x + y) - cosh(x - y), 2*sinh(x)*sinh(y)),
     (sinh(x)**2 + 1, cosh(x)**2), (cosh(x)**2 - sinh(x)**2, 1), (sinh(x)/cosh(x), tanh(x)),
@@ -205,6 +205,9 @@ UNCHANGED = [
     sin(x)**8 + cos(x)**8, tan(x)**2 - sin(x)**2, sin(x)**2*tan(x)**2, sin(x + y)*csc(y),
     tan(1)*tan(2),                                               # test_fu (a product is not made a sum)
     -2*sin(x)**2, -2*sinh(x)**2,                                 # (a sum would be 1 - cos(2*x), cosh(2*x) - 1)
+    # smaller one way, larger negated: a product and its sum, or a sum and its negation (an odd
+    # function pulls the sign out), measured apart disagree; the driver would rewrite back and forth
+    1/sinh(x/2) - cosh(2*x) + 1, sin(1 - cosh(2*x) + coth(x)), tan(1 - cosh(2*x) + 1/x),   # (review of PR c)
     cos(2)*(cos(3) + 1)**2/(cos(3) - 1)**2,                      # test_trigsimp_issues (SymPy: the same, factored)
     2**(x/2)*cos(pi*x/4)/2 + 2**(x - 1)/2,                       # test_trigsimp_issue_4032 (no trig identity)
     # angles: quotients of sums, which need a common denominator (no rows; SymPy gives
