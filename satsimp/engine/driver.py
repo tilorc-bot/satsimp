@@ -40,6 +40,7 @@ from . import config
 from . import hooks
 from .guard import (MAX_CALL_FIRINGS, MAX_DEPTH, MAX_FIRINGS, MAX_TOTAL_FIRINGS, RefineLoopError,  # noqa: F401
                     _Call, _short, loop_events, pushed, strict, strict_loops)
+from .guard import strict as strict_loops_on   # refine's own ``strict`` is its strict-input flag
 
 MAX_SPLITS = 8
 """Case splits (:func:`.split.case_split`) tried in one top-level call: each
@@ -135,12 +136,20 @@ def _memoized(ask: Any) -> Any:
     return memo_ask
 
 
-def refine(expr: Any, assumptions: Any = True) -> Any:
+def refine(expr: Any, assumptions: Any = True, *, strict: bool = False) -> Any:
     """Refine ``expr`` under ``assumptions`` with the handlers in ``handlers_dict``.
+
+    ``strict=True`` takes facts only as Q facts and keeps SymPy's assumption
+    system out: a symbol (``Symbol``, ``Dummy``, ``Wild``) declared with an
+    assumption other than ``commutative=True``, or an applied undefined function
+    whose class has one, in ``expr`` or ``assumptions`` raises
+    :class:`.strict.AssumptionSymbolError` (a ``ValueError``; checked before any
+    cache is consulted), and the call runs under the ``strict`` backend
+    (:mod:`.backend`: satassume only, never SymPy's ``ask``).  Off by default.
 
     For the duration of a top-level call the dispatcher's ``ask`` is memoized.  The
     call always terminates; when a termination guard trips it returns ``expr``
-    unchanged, or raises :class:`RefineLoopError` if :func:`strict` (see
+    unchanged, or raises :class:`RefineLoopError` if :func:`.guard.strict` (see
     *Termination* in :mod:`.guard`).  When ``ask`` raises on
     inconsistent assumptions (a ``ValueError`` saying so, as SymPy's backend
     does), ``expr`` is returned unchanged: every result is correct then, and
@@ -148,6 +157,12 @@ def refine(expr: Any, assumptions: Any = True) -> Any:
     contradiction must not decide between a result and a crash.  Inside the
     call the error still propagates (a case split drops an inconsistent
     branch that way)."""
+    if strict:
+        from . import backend
+        from .strict import check_strict
+        check_strict(expr, assumptions)
+        with backend.using("strict"):
+            return refine(expr, assumptions)
     if _calls and _dispatchers[-1][0] is hooks.dispatcher and _dispatchers[-1][1] is hooks.block():
         return _refine(expr, assumptions)
     call = _Call()
@@ -179,7 +194,7 @@ def refine(expr: Any, assumptions: Any = True) -> Any:
         hooks.dispatcher.ask = saved_ask
     if call.tripped is None:
         return result
-    if strict():
+    if strict_loops_on():
         raise RefineLoopError(call.tripped) from cause
     loop_events.append((expr, call.tripped))
     return expr

@@ -59,6 +59,51 @@ To depend on a commit (the old `tilorc-bot/satrefine` URL redirects here):
 pip install "satsimp @ https://github.com/tilorc-bot/satsimp/archive/<commit>.zip"
 ```
 
+## SymPy boundary
+
+satsimp uses SymPy for its expressions and their automatic evaluation, and for little
+else. The shipped package does not call SymPy's simplification (the `simplify` family,
+`trigsimp`, `nsimplify`, `cancel`, `together`, `factor`, `gcd`), its number fields
+(`minimal_polynomial`), its solvers, `Expr.equals`, or SymPy's assumption reasoning
+(`ask`, `refine`, `satask` and their handlers, the `_eval_refine` hooks that ask). The one
+exception is `satsimp/engine/backend.py`, which deliberately offers SymPy's `ask` as the
+`sympy` backend and as the fallback of `combined` and `union`. Three guards keep the
+boundary where it is:
+
+1. **ruff TID251** (`pyproject.toml`) bans the imports, in `satsimp/` and
+   `satrefine/`. Tests, tools, fixtures and the reference handlers are exempt; the
+   backend marks its imports with `# noqa: TID251 (<reason>)`. CI runs
+   `ruff check --select TID251 satsimp satrefine`.
+2. **`tools/check_sympy_boundary.py`** (stdlib only) flags what an import ban cannot see:
+   reads of `.cancel`, `.equals`, `._eval_refine` and the old-assumption stores
+   (`assumptions0`, `default_assumptions`), and calls of `.simplify()`, `.refine()`,
+   `.trigsimp()`, `.factor()`, `.together()` and the like. An allowed line says why with
+   `# boundary: <reason>`.
+3. **A runtime trap** (`tests/refine_identities/boundary/`) wraps SymPy's reasoning and
+   simplification functions and methods, then refines the battery and the
+   differential's random inputs with `strict=True` in a subprocess. A call reached
+   from satsimp fails the test, naming the site. Calls that SymPy's constructors make
+   while they evaluate an expression satsimp built are allowed: the allowlist in
+   `sympy_trap.py` is short and gives a reason for each entry.
+
+**Strict input.** `refine(expr, assumptions, strict=True)` takes facts only as Q facts.
+It raises `satsimp.AssumptionSymbolError` (a `ValueError`) naming every `Symbol`,
+`Dummy` or `Wild` declared with an assumption other than `commutative=True`, and every
+applied undefined function whose class has one. The check covers `expr` and
+`assumptions` and runs before any cache. The call then runs under the `strict`
+backend, so SymPy's `ask` is never consulted. The default is unchanged.
+
+```python
+from sympy import Abs, Q, Symbol
+from satsimp import refine
+
+x, p = Symbol("x"), Symbol("p", positive=True)
+refine(Abs(x), Q.positive(x), strict=True)   # x
+refine(Abs(x) + p, Q.negative(x))            # p - x: the declaration counts by default
+refine(Abs(x) + p, Q.negative(x), strict=True)
+# AssumptionSymbolError: strict mode: state assumptions as Q facts, not on p (positive=True)
+```
+
 ## Renamed from satrefine
 
 This project was called satrefine until the rename that split it into an
