@@ -114,5 +114,5 @@ versions call SymPy's ``ask`` directly, past the backend and the per-call memo;
 the copies behave the same with the selected backend's answers."""
 
 
-hooks.rebuild = rebuild
-hooks.eval_refine.update(EVAL_REFINE)
+hooks.plug(rebuild=rebuild)
+hooks.base("eval_refine").update(EVAL_REFINE)

@@ -131,6 +131,6 @@ def _run(matrices: list, target: Any, assumptions: Any, b: Binding, top: bool) -
             yield nb
 
 
-hooks.match.append(match_matrix)
-hooks.non_scalar += (MatrixExpr,)
-hooks.commutative += (MatAdd, HadamardProduct)
+hooks.base("match").append(match_matrix)
+hooks.plug(non_scalar=hooks.base("non_scalar") + (MatrixExpr,))
+hooks.plug(commutative=hooks.base("commutative") + (MatAdd, HadamardProduct))
