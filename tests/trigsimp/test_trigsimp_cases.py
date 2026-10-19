@@ -7,10 +7,12 @@ hyperbolic) give:
 
 * :data:`SIMPLIFIED`: the result, in this method's form where it differs
   from SymPy's (``cot(x)**2`` where SymPy gives ``1/tan(x)**2``);
-* :data:`UNCHANGED`: the input itself, either out of scope so far (sign
-  tables, ``Abs``/``sqrt`` and principal ranges come with PR (d);
-  noncommutative factors and symbolic exponents are left alone) or not made
-  smaller by any row;
+* :data:`UNCHANGED`: the input itself, either out of scope (noncommutative
+  factors are left alone) or not made smaller by any row;
+* :data:`ASSUMED`: the moduli, roots, symbolic exponents and inverse
+  functions, whose rows are conditional (PR (d)): the result with no
+  assumptions (the input, unless the condition is provable from nothing:
+  ``cos(1) > 0``) and with assumptions that prove the condition;
 * :data:`GAPS`: SymPy simplifies these and trigsimp does not, although its
   rows would do: strict xfails, so a fix shows up.
 """
@@ -18,6 +20,7 @@ from __future__ import annotations
 
 import pytest
 from sympy import (
+    Abs,
     Float,
     I,
     Integer,
@@ -216,14 +219,46 @@ UNCHANGED = [
     tan(2*x).expand(trig=True),                                  # test_trigsimp_issue_3826
     sin(x)/2/(cos(x) + 1),                                       # test_TR2i
     cosh(pi/4),                                                  # test_issue_7761
-    # moduli, roots, symbolic exponents, inverse functions (PR (d))
-    sqrt(sin(x)**2), cos(x) + sqrt(sin(x)**2),   # test_fu (issue 18059)
-    sin(x)**y/cos(x)**y, sin(1)**y/cos(1)**y,                    # test_trigsimp_issues
-    tan(x)**y, sin(x)**Rational(5, 2)/cos(x)**Rational(5, 2), sin(x)**2.0 + cos(x)**2.0,
-    asin(sin(a)), acos(cos(a)), atan(tan(a)), atan2(sin(a), cos(a)),   # test_trigsimp_inverse
+    sin(x)**2.0 + cos(x)**2.0,                                   # test_trigsimp_issues: float exponents, no row
     # sums with a noncommutative factor (test_trigsimp_noncommutative)
     A - A*sin(x)**2, A - A*cos(x)**2, A*sin(x)**2 + A*cos(x)**2, A + A*tan(x)**2, A/cos(x)**2 - A,
     A/cos(x)**2 - A*tan(x)**2, y*A*cos(x)**2 + y*A*sin(x)**2, A*sin(x)/cos(x), A*sin(x + y) + A*sin(x - y),
+]
+
+_open = lambda lo, hi, v=x: Q.gt(v, lo) & Q.lt(v, hi)
+_closed = lambda lo, hi, v=x: Q.ge(v, lo) & Q.le(v, hi)
+
+ASSUMED = [
+    # (expression, assumptions, result): moduli and roots, test_fu (issue 18059)
+    (sqrt(sin(x)**2), True, sqrt(sin(x)**2)),
+    (sqrt(sin(x)**2), Q.real(x), Abs(sin(x))),
+    (sqrt(sin(x)**2), _open(0, pi), sin(x)),
+    (sqrt(sin(x)**2), _open(-pi, 0), -sin(x)),
+    (cos(x) + sqrt(sin(x)**2), True, cos(x) + sqrt(sin(x)**2)),
+    (cos(x) + sqrt(sin(x)**2), _closed(0, pi), cos(x) + sin(x)),
+    (cos(x) + sqrt(sin(x)**2), _open(-pi, 0), cos(x) - sin(x)),
+    # symbolic exponents: test_trigsimp_issues
+    (sin(x)**y/cos(x)**y, True, sin(x)**y/cos(x)**y),
+    (sin(x)**y/cos(x)**y, Q.real(x), sin(x)**y/cos(x)**y),
+    (sin(x)**y/cos(x)**y, _open(-pi/2, pi/2), tan(x)**y),
+    (sin(x)**y/cos(x)**y, _open(pi/2, pi), cot(x)**(-y)),         # by sin(x) > 0
+    (sin(1)**y/cos(1)**y, True, tan(1)**y),                       # cos(1) > 0 needs no assumption
+    (tan(x)**y, True, tan(x)**y),
+    (tan(x)**y, _open(0, pi/2), tan(x)**y),                       # nothing smaller
+    (sin(x)**Rational(5, 2)/cos(x)**Rational(5, 2), True, sin(x)**Rational(5, 2)/cos(x)**Rational(5, 2)),
+    (sin(x)**Rational(5, 2)/cos(x)**Rational(5, 2), _open(-pi/2, pi/2), tan(x)**Rational(5, 2)),
+    # inverse functions on principal ranges: test_trigsimp_inverse
+    (asin(sin(a)), True, asin(sin(a))),
+    (asin(sin(a)), Q.real(a), asin(sin(a))),
+    (asin(sin(a)), _closed(-pi/2, pi/2, a), a),
+    (acos(cos(a)), True, acos(cos(a))),
+    (acos(cos(a)), _closed(0, pi, a), a),
+    (acos(cos(a)), _open(-pi/2, 0, a), acos(cos(a))),
+    (atan(tan(a)), True, atan(tan(a))),
+    (atan(tan(a)), _open(-pi/2, pi/2, a), a),
+    (atan2(sin(a), cos(a)), True, atan2(sin(a), cos(a))),
+    (atan2(sin(a), cos(a)), Q.gt(a, -pi) & Q.le(a, pi), a),
+    (atan2(sin(a), cos(a)), _open(pi, 2*pi, a), atan2(sin(a), cos(a))),
 ]
 
 GAPS = [
@@ -255,6 +290,11 @@ def test_unchanged(expr):
     assert _run(expr) == expr
 
 
+@pytest.mark.parametrize("expr, assumptions, expected", ASSUMED, ids=[f"{e} | {a}"[:70] for e, a, _ in ASSUMED])
+def test_assumed(expr, assumptions, expected):
+    assert _run(expr, assumptions) == expected
+
+
 @pytest.mark.parametrize("expr, expected", [pytest.param(e, r, marks=pytest.mark.xfail(strict=True, reason=why))
                                               for e, r, why in GAPS], ids=[str(e)[:60] for e, _, _ in GAPS])
 def test_gap(expr, expected):
@@ -274,7 +314,7 @@ def test_not_basic():
 
 
 def test_assumptions_are_accepted():
-    # the core's rows hold everywhere: assumptions do not change a result
+    # the unconditional rows hold everywhere: assumptions do not change their results
     for expr, expected in SIMPLIFIED[:12]:
         assert _run(expr, Q.positive(x) & Q.real(y)) == expected
     assert _run(sin(x)**2 + cos(x)**2, Q.gt(x, 0) & Q.lt(x, pi)) == 1
