@@ -91,6 +91,10 @@ so refine's registry and outputs are untouched and refine is never imported.
    node count breaks ties: `1/cos(x)**2` is smaller than `1 + tan(x)**2`).
    The sites of one term are replaced together, the term divided by their
    left sides at once, so every division cancels a factor of the term.
+   A product is rewritten only into a product: whether a term becomes a sum
+   is decided by its sum, where a product and the sum it sits in cannot
+   disagree about what is smaller (`-2*sinh(x)**2` alone is larger than
+   `1 - cosh(2*x)`, inside `1/sinh(x/2) - 2*sinh(x)**2` it is not).
    Rows of kinds 5 and 6 are rule rows: they fire when their condition is
    provable.
    The simplify pass runs twice on the normalized expression, once with

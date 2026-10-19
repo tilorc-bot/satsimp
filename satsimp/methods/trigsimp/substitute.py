@@ -17,6 +17,13 @@ side at the top, then the rest of the term distributed over it) and the
 terms added again.  The
 candidate with the smallest measure is returned when it is smaller than the
 sum's; a site counts only when its row's condition is provable.
+
+A product is rewritten into a product only: whether a term becomes a sum is
+decided by the sum it is a term of, where the new terms collect with the
+others and a negative coefficient costs no operation.  Measured alone, a
+product and the sum it sits in can disagree (``-2*sinh(x)**2`` is larger
+than ``1 - cosh(2*x)``, but ``1/sinh(x/2) - cosh(2*x) + 1`` is larger than
+``1/sinh(x/2) - 2*sinh(x)**2``), and the driver would rewrite back and forth.
 """
 from __future__ import annotations
 
@@ -98,6 +105,7 @@ def substitution_handler(rows: list, measure: Callable[[Any], tuple], heads: tup
     """A handler from substitution rows (see the module docstring); ``heads``
     are the applied functions the left sides are made of."""
     table = [(lhs, rhs, cond, _pattern(lhs)) for lhs, rhs, cond in rows]
+    first = getattr(measure, "first", None)     # the measure's first part, if cheaper alone
 
     def handler(expr: Any, assumptions: Any) -> Any:
         terms = list(Add.make_args(expr))
@@ -106,6 +114,7 @@ def substitution_handler(rows: list, measure: Callable[[Any], tuple], heads: tup
         powers = [_powers(t, heads) for t in terms]
         if not any(powers):
             return None
+        product = not isinstance(expr, Add)    # rewritten into a product only: see the module docstring
         best, best_m = None, measure(expr)
         for lhs, rhs, cond, pattern in table:
             sites = []        # (term index, binding key, binding, j)
@@ -128,7 +137,9 @@ def substitution_handler(rows: list, measure: Callable[[Any], tuple], heads: tup
                 choices.append(sites)
             for chosen in choices:
                 cand = _candidate(terms, chosen, lhs, rhs)
-                if cand is None:
+                if cand is None or (product and isinstance(cand, Add)):
+                    continue
+                if first is not None and first(cand) > best_m[0]:    # larger without count_ops
                     continue
                 m = measure(cand)
                 if m < best_m:

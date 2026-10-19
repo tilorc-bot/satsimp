@@ -38,8 +38,8 @@ t = Symbol('t')
 s = Symbol('s')
 ARGUMENTS = [t, 2*t, t + pi/7, -t]
 """What a pattern symbol is bound to: the row holds for every argument."""
-SECOND = [s, s - pi/5, t, 3*t]
-"""What a second pattern symbol is bound to (``t`` too: both bound to one argument)."""
+SECOND = [s, s - pi/5, t + pi/7, 3*t]
+"""What a second pattern symbol is bound to, beside :data:`ARGUMENTS` (the third pair binds both to one argument)."""
 
 
 def _symbols(row):
@@ -79,14 +79,15 @@ def test_row_domain(family, row):
     """At every zero and pole of sin and cos, and of sinh and cosh (at ``I``
     times those of sin and cos), and a regular point or two, the right side is
     defined exactly where the left side is, and equal there; a second pattern
-    symbol is at a zero, a pole or a regular point too."""
+    symbol is at a zero, a pole or a regular point too, or at the same point."""
     lhs, rhs, _ = row
     syms = _symbols(row)
     points = SPECIAL + [I*p for p in SPECIAL[1:]] + [p + I for p in SPECIAL[:5]] + [Rational(1, 3), -I]
-    others = [S.Zero, pi/2, I*pi/2, Rational(1, 3)]
+    others = [S.Zero, pi/2, I*pi/2, Rational(1, 3), None]     # None: the same point as the first
     defined = 0
     for i, p in enumerate(points):
-        at = dict(zip(syms, (p, others[i % len(others)])))
+        other = others[i % len(others)]
+        at = dict(zip(syms, (p, p if other is None else other)))
         vl, vr = exact_value(lhs, at), exact_value(rhs, at)
         assert (vl is None) == (vr is None), f"{lhs} -> {rhs} at {at}: {vl} vs {vr}"
         if vl is not None:

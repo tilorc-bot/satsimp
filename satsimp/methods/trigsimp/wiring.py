@@ -10,16 +10,17 @@ the order listed here, under :func:`measure`; the Pythagorean pre-pass
 """
 from __future__ import annotations
 
+from functools import lru_cache
 from typing import Any
 
 from sympy import (
+    Basic,
     cos,
     cosh,
     cot,
     coth,
     csc,
     csch,
-    preorder_traversal,
     sec,
     sech,
     sin,
@@ -38,11 +39,30 @@ HEADS = (sin, cos, tan, cot, sec, csc, sinh, cosh, tanh, coth, sech, csch)
 """The circular and hyperbolic heads trigsimp counts and rewrites."""
 
 
+@lru_cache(maxsize=65536)
+def _counts(e: Any) -> tuple[int, int]:
+    """Trigonometric nodes and all nodes of ``e`` (as :func:`preorder_traversal`
+    visits them), remembered per subtree: a candidate shares most of its terms."""
+    trig, nodes = int(isinstance(e, HEADS)), 1
+    for a in (e.args if isinstance(e, Basic) else ()):
+        t, n = _counts(a)
+        trig, nodes = trig + t, nodes + n
+    return trig, nodes
+
+
+def trig_nodes(e: Any) -> int:
+    """The first part of :func:`measure`, without ``count_ops``."""
+    return _counts(e)[0]
+
+
 def measure(e: Any) -> tuple[int, int, int]:
     """The rewrite ordering: trigonometric nodes (Fu et al.'s ``L``), then
     ``count_ops``, then all nodes (``1/cos(x)**2`` is smaller than ``1 + tan(x)**2``)."""
-    nodes = list(preorder_traversal(e))
-    return sum(1 for node in nodes if isinstance(node, HEADS)), size(e), len(nodes)
+    trig, nodes = _counts(e)
+    return trig, size(e), nodes
+
+
+measure.first = trig_nodes  # type: ignore[attr-defined]
 
 
 def _by_head(rows: list) -> dict:
