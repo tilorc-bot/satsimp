@@ -15,7 +15,8 @@ x = Symbol("x")
 refine(log(x), Q.negative(x))   # log(-x) + I*pi
 ```
 
-More methods (a trig simplifier is a likely next one) are to share the same
+The second is a trigonometric simplifier, `satsimp.trigsimp(expr, assumptions)`
+(see [trigsimp](#trigsimp-a-trigonometric-simplifier) below). Methods share the same
 machinery: the row format, the matcher, the condition prover, case splits, the
 driver and its termination guard, generated tables and the offline
 verification tooling. That machinery is `satsimp/engine/`; each method is a
@@ -39,6 +40,7 @@ pip install "sympy @ git+https://github.com/tilorc-bot/sympy@6379c4da69"
 PYTHONHASHSEED=0 python -m pytest -q -n auto tests/refine_identities --ignore=tests/refine_identities/needs
 PYTHONHASHSEED=0 python -m pytest -q -n auto tests/refine
 PYTHONHASHSEED=0 python -m pytest -q -n auto tests/refine_v3
+PYTHONHASHSEED=0 python -m pytest -q -n auto tests/trigsimp
 ```
 
 Each tree runs in its own pytest process: each selects a handler package that
@@ -46,9 +48,9 @@ registers into the one process-wide `handlers_dict`, so `tests/conftest.py`
 refuses a session that collects more than one (a bare `pytest` included).
 
 The test trees share module basenames, so run each of `tests/refine_identities`,
-`tests/refine` and `tests/refine_v3` in its own process, as CI does.
+`tests/refine`, `tests/refine_v3` and `tests/trigsimp` in its own process, as CI does.
 
-refine also works on PyPI's SymPy 1.14.0, which CI tests as well; there, the
+refine and trigsimp also work on PyPI's SymPy 1.14.0, which CI tests as well; there, the
 tests that need the newer SymPy are strict xfails or leave out the cases that
 need it (see
 [docs/refine-testing.md](docs/refine-testing.md), "CI").
@@ -103,6 +105,42 @@ refine(Abs(x) + p, Q.negative(x))            # p - x: the declaration counts by 
 refine(Abs(x) + p, Q.negative(x), strict=True)
 # AssumptionSymbolError: strict mode: state assumptions as Q facts, not on p (positive=True)
 ```
+
+## trigsimp: a trigonometric simplifier
+
+```python
+from sympy import cos, sin, symbols, tan
+from satsimp import trigsimp
+
+x = symbols("x")
+trigsimp(sin(x)**2 + cos(x)**2)                  # 1
+trigsimp(1/cos(x)**2 - tan(x)**2)                # 1
+trigsimp(sin(x)**3/cos(x)**3)                    # tan(x)**3
+trigsimp(-4*sin(x)**4 + 4*cos(x)**4 - 8*cos(x)**2)   # -4
+```
+
+`trigsimp(expr, assumptions=True)` takes `assumptions` as `refine` does (a
+boolean of `Q` facts; the symbols' own assumptions are not read) and has no
+other options. It returns `expr` itself unless it finds a strictly smaller
+equal expression, smaller meaning fewer trigonometric functions, then a smaller
+`count_ops`. The result equals `expr` wherever `expr` is defined; it may be
+defined at more points (`tan(x)*cos(x)` becomes `sin(x)`), never at fewer.
+
+What it does now (the core, `satsimp/methods/trigsimp/`): a normalizing pass
+writes `tan`, `cot`, `sec` and `csc` with `sin` and `cos`; a simplifying pass
+applies substitution rows (quotients: `sin(u)/cos(u) = tan(u)`,
+`cos(u)/sin(u) = cot(u)`, to any integer power; Pythagorean:
+`sin(u)**2 + cos(u)**2 = 1` and its `tan`, `cot` forms, each way round) to
+sums and products, keeping a rewrite only when it makes the expression smaller.
+Each step is greedy: an identity that pays off only after a step that does not
+shrink the expression is not found, and nothing is factored or cancelled.
+
+Not there yet: angle-addition, double-angle and hyperbolic rows, the sign
+tables, `Abs`/`sqrt` and inverse functions on principal ranges (rows that need
+the assumptions), noncommutative sums and symbolic exponents (returned
+unchanged). The design and the plan are in [docs/trigsimp.md](docs/trigsimp.md);
+the tests are `tests/trigsimp/` (SymPy's own trigsimp and fu identities, a
+numeric check of every row, a soundness fuzz).
 
 ## Renamed from satrefine
 
