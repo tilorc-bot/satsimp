@@ -12,7 +12,7 @@ license = {text = "BSD-3-Clause"}
 # satassume pinned to a commit of its main, so outputs are reproducible; the nightly
 # .github/workflows/satassume-bump.yml moves it (docs/refine-testing.md, "The satassume pin")
 dependencies = [
-    "satassume @ git+https://github.com/tilorc-bot/satassume@5a7d3b8d9e8e1a8d28a1f05892ff581ab4446bc9",
+    "satassume @ git+https://github.com/tilorc-bot/satassume@ead8412ed9c8f13b58868fde7dd40f47b13ebb3c",
     "sympy>=1.12",
     "mpmath",
 ]
