@@ -12,7 +12,7 @@ jobs:
         # the refine tests need its assumptions/refine changes
         sympy: ["sympy @ git+https://github.com/tilorc-bot/sympy@6379c4da69"]
         include:
-          # released SymPy: refine must work on it; what needs the newer SymPy is a strict
+          # released SymPy: refine and trigsimp must work on it; what needs the newer SymPy is a strict
           # xfail or a left-out case there (a feature check, not the version)
           - python: "3.12"
             sympy: "sympy==1.14.0"
@@ -32,6 +32,10 @@ jobs:
         if: always()
         env: {PYTHONHASHSEED: "0"}
       - run: python -m pytest -q -n auto tests/refine_v3
+        if: always()
+        env: {PYTHONHASHSEED: "0"}
+      # trigsimp (docs/trigsimp.md, "Test plan"): cases, rows, soundness fuzz, isolation from refine
+      - run: python -m pytest -q -n auto tests/trigsimp
         if: always()
         env: {PYTHONHASHSEED: "0"}
   boundary:
