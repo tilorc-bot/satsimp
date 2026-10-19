@@ -106,7 +106,7 @@ def _is_unit_coefficient_form(pattern: Any) -> tuple[Any, Any, Any] | None:
             syms = [s for s in term.free_symbols if not isinstance(s, _Part)]
             if len(syms) == 1 and term.free_symbols == {syms[0]}:
                 n = syms[0]
-                unit = (term/n).cancel()
+                unit = term/n
                 if not unit.has(n) and rest != n:
                     return n, unit, rest
     return None
@@ -256,7 +256,7 @@ def _match(pattern: Any, target: Any, assumptions: Any, b: Binding, top: bool = 
             terms = Add.make_args(target)
             with_unit = []
             for t in terms:
-                ratio = _ratio(t, unit)
+                ratio = t/unit
                 if not ratio.has(S.Pi) and not ratio.has(S.ImaginaryUnit):
                     with_unit.append((t, ratio))
             if not with_unit:
@@ -301,13 +301,6 @@ def _match(pattern: Any, target: Any, assumptions: Any, b: Binding, top: bool = 
         return
     yield from _match_seq(pattern.args, target.args, assumptions, b)
 
-
-@lru_cache(maxsize=4096)
-def _ratio(term: Any, unit: Any) -> Any:
-    """``term/unit``, cancelled: the coefficient of ``unit`` in ``term`` for the
-    ``n*unit + r`` form.  Remembered: the terms met are few, and ``cancel``
-    is most of the cost of that form."""
-    return (term/unit).cancel()
 
 
 def _match_seq(patterns: Iterable[Any], targets: Iterable[Any], assumptions: Any, b: Binding) -> Iterator[Binding]:
