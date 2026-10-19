@@ -106,6 +106,7 @@ def test_runtime_trap_corpus():
     assert d["mode"] == "raise"
     assert d["canary"]["raised"] == "TrapError" and d["canary"]["recorded"], d["canary"]
     assert "backend.py" in (d["canary"]["combined"] or ""), d["canary"]
+    assert d["canary"]["cached"] == "TrapError", d["canary"]    # a cached method is not a constructor
     # the strict backend answered every query
     assert d["backend"] == "strict" and set(d["backends"]) == {"strict"}, d["backends"]
     counts = d["counts"]
