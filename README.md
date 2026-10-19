@@ -88,12 +88,17 @@ boundary where it is:
    while they evaluate an expression satsimp built are allowed: the allowlist in
    `sympy_trap.py` is short and gives a reason for each entry.
 
-**Strict input.** `refine(expr, assumptions, strict=True)` takes facts only as Q facts.
+**Strict input.** `refine(expr, assumptions, strict=True)` (and `trigsimp`'s
+`strict=True`, the same check and backend) takes facts only as Q facts.
 It raises `satsimp.AssumptionSymbolError` (a `ValueError`) naming every `Symbol`,
-`Dummy` or `Wild` declared with an assumption other than `commutative=True`, and every
-applied undefined function whose class has one. The check covers `expr` and
-`assumptions` and runs before any cache. The call then runs under the `strict`
-backend, so SymPy's `ask` is never consulted. The default is unchanged.
+`Dummy`, `Wild` or `IndexedBase` declared with an assumption other than
+`commutative=True`, and every applied undefined function, or `Function` subclass
+defined outside SymPy, whose class has one. The check and the exception are
+satassume's (`satassume.sympy_api.check_strict`), so `refine` and satassume's
+`ask(..., strict=True)` reject the same input. It covers `expr` and `assumptions` and
+runs before any cache. It sees only what survives construction (`p > 0` is already
+`S.true` for a positive `p`), so build the input from plain symbols. The call then
+runs under the `strict` backend, so SymPy's `ask` is never consulted. The default is unchanged.
 
 ```python
 from sympy import Abs, Q, Symbol
@@ -122,9 +127,9 @@ trigsimp(sin(x)**y/cos(x)**y, Q.gt(x, 0) & Q.lt(x, pi/2))       # tan(x)**y
 trigsimp(asin(sin(x)), Q.ge(x, -pi/2) & Q.le(x, pi/2))          # x
 ```
 
-`trigsimp(expr, assumptions=True)` takes `assumptions` as `refine` does (a
-boolean of `Q` facts; the symbols' own assumptions are not read) and has no
-other options. It returns `expr` itself unless it finds a strictly smaller
+`trigsimp(expr, assumptions=True, *, strict=False)` takes `assumptions` as
+`refine` does (a boolean of `Q` facts) and has no options besides `strict`;
+`strict=True` is refine's strict input (above). It returns `expr` itself unless it finds a strictly smaller
 equal expression, smaller meaning fewer trigonometric functions, then a smaller
 `count_ops`, then fewer `Abs`, then fewer nodes. The result equals `expr` wherever `expr` is defined; it may be
 defined at more points (`tan(x)*cos(x)` becomes `sin(x)`), never at fewer.
