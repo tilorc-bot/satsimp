@@ -184,7 +184,8 @@ def installed(**values: Any) -> Iterator[None]:
     try:
         yield
     finally:
-        loaded = [name for name in fresh if _carry(name, module[name], fresh[name], entered[name], saved)]
+        loaded = [name for name in fresh
+                  if _carry(name, module[name], fresh[name], entered[name], saved, name not in values)]
         module.update(saved)
     if loaded:
         raise LoadedInsideError(f"hooks {sorted(loaded)} were set inside another method's block "
@@ -195,12 +196,16 @@ def _copied(value: Any) -> Any:
     return type(value)(value) if isinstance(value, (dict, list, set)) else value
 
 
-def _carry(name: str, now: Any, given: Any, entered: Any, saved: dict) -> bool:
+def _carry(name: str, now: Any, given: Any, entered: Any, saved: dict, default: bool) -> bool:
     """Carry over to ``saved`` what was set on hook ``name`` inside the block
-    (rebound, or a container changed in place); whether anything was."""
+    (rebound, or, for a hook left at its ``default``, a container changed in
+    place: a container the block's method passed is its own to fill); whether
+    anything was."""
     if now is not given:
         saved[name] = now
         return True
+    if not default:
+        return False
     if isinstance(now, dict) and now != entered:
         saved[name].update({k: v for k, v in now.items() if k not in entered or entered[k] is not v})
         return True

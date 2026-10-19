@@ -48,6 +48,16 @@ def test_refines_hooks_are_restored():
     assert driver.generated_handlers is hooks.generated and hooks.generated
 
 
+def test_a_method_fills_its_own_containers():
+    from sympy import Abs, S
+    tables: dict = {}
+    with hooks.installed(dispatcher=_toy(), eval_method=None, generated=tables):
+        tables["Abs"] = lambda e, a: S(42)
+        assert driver.refine(Abs(x)) == 42
+    assert "Abs" not in hooks.generated
+    assert refine(Abs(x), Q.positive(x)) == x
+
+
 def test_unknown_hook_is_refused():
     with pytest.raises(TypeError), hooks.installed(dispatchr=_toy()):
         pass
