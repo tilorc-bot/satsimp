@@ -126,18 +126,27 @@ equal expression, smaller meaning fewer trigonometric functions, then a smaller
 `count_ops`, then fewer nodes. The result equals `expr` wherever `expr` is defined; it may be
 defined at more points (`tan(x)*cos(x)` becomes `sin(x)`), never at fewer.
 
-What it does now (the core, `satsimp/methods/trigsimp/`): a normalizing pass
-writes `tan`, `cot`, `sec` and `csc` with `sin` and `cos`; a simplifying pass
-applies substitution rows (quotients: `sin(u)/cos(u) = tan(u)`,
-`cos(u)/sin(u) = cot(u)`, to any integer power; Pythagorean:
-`sin(u)**2 + cos(u)**2 = 1` and its `tan`, `cot` forms, each way round) to
-sums and products, keeping a rewrite only when it makes the expression smaller.
+What it does now (`satsimp/methods/trigsimp/`): a normalizing pass writes
+`tan`, `cot`, `sec` and `csc` with `sin` and `cos` (and `tanh`, `coth`,
+`sech`, `csch` with `sinh` and `cosh`); a simplifying pass applies
+substitution rows to sums and products, keeping a rewrite only when it makes
+the expression smaller:
+
+- quotients: `sin(u)/cos(u) = tan(u)`, `cos(u)/sin(u) = cot(u)`, to any
+  integer power;
+- Pythagorean: `sin(u)**2 + cos(u)**2 = 1` and its `tan`, `cot` forms, each
+  way round;
+- angles: the addition formulas and double angles, each way round
+  (`sin(x)*cos(y) + cos(x)*sin(y) = sin(x + y)`,
+  `sin(x + y) + sin(x - y) = 2*sin(x)*cos(y)`, `1/2 - cos(2*x)/2 = sin(x)**2`);
+- the same rows for `sinh` and `cosh` (`cosh(u)**2 - sinh(u)**2 = 1`).
+
 Each step is greedy: an identity that pays off only after a step that does not
 shrink the expression is not found, and nothing is factored or cancelled.
 
-Not there yet: angle-addition, double-angle and hyperbolic rows, the sign
-tables, `Abs`/`sqrt` and inverse functions on principal ranges (rows that need
-the assumptions), noncommutative sums and symbolic exponents (returned
+Not there yet: the sign tables, `Abs`/`sqrt` and inverse functions on
+principal ranges (rows that need the assumptions), noncommutative sums and
+symbolic exponents (returned
 unchanged). The design and the plan are in [docs/trigsimp.md](docs/trigsimp.md);
 the tests are `tests/trigsimp/` (SymPy's own trigsimp and fu identities, a
 numeric check of every row, a soundness fuzz).

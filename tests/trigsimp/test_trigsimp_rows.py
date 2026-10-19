@@ -4,10 +4,10 @@ A row ``(lhs, rhs, condition)`` must state an identity, and its right side
 must be defined exactly where its left side is: defined wherever the left
 side is (a rewrite never loses a point), and not defined where the left side
 is not (a row never removes a pole: ``tan(u) -> sin(u)/cos(u)`` keeps the
-pole at ``pi/2``).  Every row of the core holds everywhere (condition
-``True``), so both are checked at random real and complex points and at the
-exact zeros and poles of the trigonometric functions, with ``u`` also a
-shifted or scaled argument.
+pole at ``pi/2``).  Every row so far holds everywhere (condition ``True``),
+so both are checked at random real and complex points and at the exact zeros
+and poles of the circular and hyperbolic functions, with each pattern symbol
+also a shifted or scaled argument.
 """
 from __future__ import annotations
 
@@ -25,17 +25,21 @@ from trigsimp_numeric import (
 )
 
 from satsimp.methods.trigsimp import wiring
-from satsimp.methods.trigsimp.rules import normal, pythagorean, quotients
+from satsimp.methods.trigsimp.rules import angles, normal, pythagorean, quotients
 from satsimp.methods.trigsimp.substitute import _candidate, _pattern
 
 ROWS = [("normal", row) for row in normal.RULES] + \
        [("quotients", row) for row in quotients.SUBSTITUTIONS] + \
-       [("pythagorean", row) for row in pythagorean.SUBSTITUTIONS]
+       [("pythagorean", row) for row in pythagorean.SUBSTITUTIONS] + \
+       [("angles", row) for row in angles.SUBSTITUTIONS]
 IDS = [f"{family}: {row[0]} -> {row[1]}" for family, row in ROWS]
 
 t = Symbol('t')
+s = Symbol('s')
 ARGUMENTS = [t, 2*t, t + pi/7, -t]
-"""What the pattern symbol is bound to: the row holds for every argument."""
+"""What a pattern symbol is bound to: the row holds for every argument."""
+SECOND = [s, s - pi/5, t + pi/7, 3*t]
+"""What a second pattern symbol is bound to, beside :data:`ARGUMENTS` (the third pair binds both to one argument)."""
 
 
 def _symbols(row):
@@ -61,10 +65,10 @@ def test_row_shape(family, row):
 def test_row_identity(family, row):
     lhs, rhs, _ = row
     rng = random.Random(f"identity {lhs} {rhs}")
-    (u,) = _symbols(row)
-    for arg in ARGUMENTS:
-        l, r = lhs.xreplace({u: arg}), rhs.xreplace({u: arg})
-        for point in random_points([t], rng, 20):
+    syms = _symbols(row)
+    for args in zip(ARGUMENTS, SECOND):
+        l, r = lhs.xreplace(dict(zip(syms, args))), rhs.xreplace(dict(zip(syms, args)))
+        for point in random_points([t, s], rng, 20):
             vl, vr = value(l, point), value(r, point)
             assert vl is not None and vr is not None, (l, r, point)
             assert close(vl, vr, rel=1e-30), (l, r, point, vl, vr)
@@ -72,18 +76,23 @@ def test_row_identity(family, row):
 
 @pytest.mark.parametrize("family, row", ROWS, ids=IDS)
 def test_row_domain(family, row):
-    """At every zero and pole of sin and cos (and a regular point or two), the
-    right side is defined exactly where the left side is, and equal there."""
+    """At every zero and pole of sin and cos, and of sinh and cosh (at ``I``
+    times those of sin and cos), and a regular point or two, the right side is
+    defined exactly where the left side is, and equal there; a second pattern
+    symbol is at a zero, a pole or a regular point too, or at the same point."""
     lhs, rhs, _ = row
-    (u,) = _symbols(row)
-    points = SPECIAL + [p + I for p in SPECIAL[:5]] + [Rational(1, 3), -I]
+    syms = _symbols(row)
+    points = SPECIAL + [I*p for p in SPECIAL[1:]] + [p + I for p in SPECIAL[:5]] + [Rational(1, 3), -I]
+    others = [S.Zero, pi/2, I*pi/2, Rational(1, 3), None]     # None: the same point as the first
     defined = 0
-    for p in points:
-        vl, vr = exact_value(lhs, {u: p}), exact_value(rhs, {u: p})
-        assert (vl is None) == (vr is None), f"{lhs} -> {rhs} at {u} = {p}: {vl} vs {vr}"
+    for i, p in enumerate(points):
+        other = others[i % len(others)]
+        at = dict(zip(syms, (p, p if other is None else other)))
+        vl, vr = exact_value(lhs, at), exact_value(rhs, at)
+        assert (vl is None) == (vr is None), f"{lhs} -> {rhs} at {at}: {vl} vs {vr}"
         if vl is not None:
             defined += 1
-            assert exact_close(vl, vr), (lhs, rhs, p, vl, vr)
+            assert exact_close(vl, vr), (lhs, rhs, at, vl, vr)
     assert defined >= 4
 
 

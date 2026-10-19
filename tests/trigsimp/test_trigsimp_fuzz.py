@@ -1,9 +1,10 @@
 """Soundness fuzz and termination of trigsimp (``docs/trigsimp.md``, "Soundness", "Test plan").
 
-Random small trigonometric expressions (``sin``, ..., ``csc`` of ``x``,
-``y``, ``x + y``, ``2*x``, ``x - y``, ``x/2``; rational coefficients; integer
-powers up to 4 in magnitude; sums of such terms, partly built to contain
-Pythagorean sums and quotients so that the rows fire; now and then divided by
+Random small trigonometric expressions (``sin``, ..., ``csc`` and, less
+often, ``sinh``, ``cosh``, ``tanh``, ``sech`` of ``x``, ``y``, ``x + y``,
+``2*x``, ``x - y``, ``x/2``; rational coefficients; integer powers up to 4 in
+magnitude; sums of such terms, partly built to contain Pythagorean sums,
+quotients and angle formulas so that the rows fire; now and then divided by
 another term, squared or wrapped in ``sin``), with a fixed seed.  For each:
 
 * the result agrees with the input at random real and complex points where
@@ -20,7 +21,23 @@ from __future__ import annotations
 import random
 
 import pytest
-from sympy import Rational, cos, cot, csc, expand, sec, sin, symbols, tan
+from sympy import (
+    I,
+    Rational,
+    cos,
+    cosh,
+    cot,
+    csc,
+    expand,
+    pi,
+    sec,
+    sech,
+    sin,
+    sinh,
+    symbols,
+    tan,
+    tanh,
+)
 from trigsimp_numeric import (
     SPECIAL,
     close,
@@ -37,7 +54,7 @@ from satsimp.methods.trigsimp.wiring import measure
 
 x, y = symbols('x y')
 ARGS = [x, y, x + y, 2*x, x - y, x/2]
-HEADS = [sin, cos, tan, cot, sec, csc]
+HEADS = [sin, cos, tan, cot, sec, csc, sin, cos, sinh, cosh, tanh, sech]
 COEFFS = [1, 1, 1, -1, 2, -2, 3, Rational(1, 2), Rational(-3, 4), 5]
 EXPONENTS = [1, 1, 2, 2, 3, 4, -1, -2, -3, -4]
 
@@ -59,7 +76,11 @@ def _identity_piece(rng: random.Random):
     u = rng.choice(ARGS[:4])
     pieces = [sin(u)**2 + cos(u)**2, 1 + tan(u)**2, 1 + cot(u)**2, sec(u)**2 - tan(u)**2,
               csc(u)**2 - cot(u)**2, 1 - sin(u)**2, 1 - cos(u)**2, sin(u)/cos(u), cos(u)*tan(u),
-              sin(u)*cot(u)]
+              sin(u)*cot(u), cosh(u)**2 - sinh(u)**2, 1 - tanh(u)**2, sinh(u)/cosh(u)]
+    v = rng.choice(ARGS[:4])
+    pieces += [sin(u)*cos(v) + cos(u)*sin(v), cos(u)*cos(v) - sin(u)*sin(v), sin(u + v) + sin(u - v),
+               cos(u)**2 - sin(u)**2, 2*sin(u)*cos(u), sinh(u)*cosh(v) - cosh(u)*sinh(v),
+               cosh(u + v) - cosh(u - v), 2*cosh(u)**2 - 1]
     factor = _term(rng) if rng.random() < .5 else 1
     return expand(rng.choice(COEFFS)*factor*rng.choice(pieces)**rng.choice([1, 1, 2]))
 
@@ -90,7 +111,7 @@ def _check(e, rng: random.Random) -> list[str]:
         if vr is None or not close(ve, vr, scale(e, point), rel=1e-25):
             problems.append(f"value: {e} -> {r} at {point}: {ve} vs {vr}")
             break
-    for sx in rng.sample(SPECIAL, 3):
+    for sx in rng.sample(SPECIAL + [I*pi/2, I*pi], 3):
         point = {x: sx, y: Rational(1, 3)}
         ve = exact_value(e, point)
         if ve is None:

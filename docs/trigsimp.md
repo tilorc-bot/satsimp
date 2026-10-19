@@ -39,7 +39,15 @@ hyperbolic ones with the same tables. Three kinds of rows:
    reverses; even powers are rewritten as powers of the square
    (`-4*sin(x)**4 + 4*cos(x)**4 - 8*cos(x)**2 = -4`).
 3. **Angles** (sums of products): addition formulas in both directions,
-   `sin(u)*cos(u) = sin(2*u)/2`, `cos(u)**2 = (1 + cos(2*u))/2`.
+   `sin(u)*cos(u) = sin(2*u)/2`, `cos(u)**2 = (1 + cos(2*u))/2`. A
+   contracting row has a product on its left side and the other product of
+   the formula on its right (`sin(u)*cos(v) = sin(u + v) - cos(u)*sin(v)`),
+   so that in `sin(x)*cos(y) + cos(x)*sin(y)` the second term cancels; an
+   expanding row has a function of `u + v` (one term against the rest) or
+   of `2*u` on its left side.
+
+The hyperbolic rows are the circular ones with the signs of
+`cosh(u)**2 - sinh(u)**2 = 1` (Osborn's rule).
 
 Then the rows that need the assumptions:
 
@@ -83,6 +91,13 @@ so refine's registry and outputs are untouched and refine is never imported.
    node count breaks ties: `1/cos(x)**2` is smaller than `1 + tan(x)**2`).
    The sites of one term are replaced together, the term divided by their
    left sides at once, so every division cancels a factor of the term.
+   A product is rewritten only into a product: whether a term becomes a sum
+   is decided by its sum, where a product and the sum it sits in cannot
+   disagree about what is smaller (`-2*sinh(x)**2` alone is larger than
+   `1 - cosh(2*x)`, inside `1/sinh(x/2) - 2*sinh(x)**2` it is not). For the
+   same reason a sum is measured in the sign an odd function keeps for it
+   (`sin(-e)` is `-sin(e)`): a sum can be smaller than another and larger
+   negated.
    Rows of kinds 5 and 6 are rule rows: they fire when their condition is
    provable.
    The simplify pass runs twice on the normalized expression, once with
@@ -158,7 +173,8 @@ both the SymPy fork and PyPI SymPy 1.14.0:
   in the same process, trigsimp imports no other method, and `import satsimp`
   imports no method; refine's three test trees are run as before.
 
-The core (PR b) has the first two kinds of rows and no conditional rows, so
-the fuzz runs without assumptions and the **assumptions** tests only check
+The core (PR b) has the first two kinds of rows, PR (c) the third and the
+hyperbolic rows; none of them is conditional, so the fuzz runs without
+assumptions and the **assumptions** tests only check
 that assumptions are accepted and change nothing; both grow with the rows
 that need them.

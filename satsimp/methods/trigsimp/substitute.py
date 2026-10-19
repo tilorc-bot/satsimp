@@ -17,6 +17,19 @@ side at the top, then the rest of the term distributed over it) and the
 terms added again.  The
 candidate with the smallest measure is returned when it is smaller than the
 sum's; a site counts only when its row's condition is provable.
+
+A product is rewritten into a product only: whether a term becomes a sum is
+decided by the sum it is a term of, where the new terms collect with the
+others and a negative coefficient costs no operation.  Measured alone, a
+product and the sum it sits in can disagree (``-2*sinh(x)**2`` is larger
+than ``1 - cosh(2*x)``, but ``1/sinh(x/2) - cosh(2*x) + 1`` is larger than
+``1/sinh(x/2) - 2*sinh(x)**2``), and the driver would rewrite back and forth.
+For the same reason a sum and a candidate are measured in the sign SymPy's odd
+functions keep (:func:`_signless`): an odd function pulls the sign out of its
+argument (``sin(1 - cosh(2*x) + coth(x))`` is rewritten to
+``sin(-2*sinh(x)**2 + coth(x))``, which SymPy writes as
+``-sin(2*sinh(x)**2 - coth(x))``), and a sum smaller than another can be
+larger negated, so the negated sum would be rewritten back.
 """
 from __future__ import annotations
 
@@ -98,6 +111,7 @@ def substitution_handler(rows: list, measure: Callable[[Any], tuple], heads: tup
     """A handler from substitution rows (see the module docstring); ``heads``
     are the applied functions the left sides are made of."""
     table = [(lhs, rhs, cond, _pattern(lhs)) for lhs, rhs, cond in rows]
+    first = getattr(measure, "first", None)     # the measure's first part, if cheaper alone
 
     def handler(expr: Any, assumptions: Any) -> Any:
         terms = list(Add.make_args(expr))
@@ -106,7 +120,8 @@ def substitution_handler(rows: list, measure: Callable[[Any], tuple], heads: tup
         powers = [_powers(t, heads) for t in terms]
         if not any(powers):
             return None
-        best, best_m = None, measure(expr)
+        product = not isinstance(expr, Add)    # rewritten into a product only: see the module docstring
+        best, best_m = None, measure(_signless(expr))
         for lhs, rhs, cond, pattern in table:
             sites = []        # (term index, binding key, binding, j)
             for i, pw in enumerate(powers):
@@ -128,9 +143,11 @@ def substitution_handler(rows: list, measure: Callable[[Any], tuple], heads: tup
                 choices.append(sites)
             for chosen in choices:
                 cand = _candidate(terms, chosen, lhs, rhs)
-                if cand is None:
+                if cand is None or (product and isinstance(cand, Add)):
                     continue
-                m = measure(cand)
+                if first is not None and first(cand) > best_m[0]:    # larger without count_ops
+                    continue
+                m = measure(_signless(cand))
                 if m < best_m:
                     best, best_m = cand, m
         return best
@@ -138,6 +155,12 @@ def substitution_handler(rows: list, measure: Callable[[Any], tuple], heads: tup
     handler.rows = rows      # type: ignore[attr-defined]
     handler.kind = "substitution"  # type: ignore[attr-defined]
     return handler
+
+
+def _signless(e: Any) -> Any:
+    """``e`` or ``-e``, whichever SymPy keeps inside an odd function (``sin(-e)``
+    is ``-sin(e)`` when ``e`` does not extract a minus sign): the same for both."""
+    return -e if e.could_extract_minus_sign() else e
 
 
 def _holds(cache: dict, key: Any, b: dict, cond: Any, assumptions: Any) -> bool:
