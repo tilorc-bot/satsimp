@@ -156,11 +156,22 @@ def _defaults() -> dict[str, Any]:
 ask_whole_default, rebuild_default, two_valued_default = ask_whole, rebuild, two_valued
 
 
+class LoadedInsideError(RuntimeError):
+    """A method set hooks while another method's were installed (it was imported inside the block)."""
+
+
 @contextmanager
 def installed(**values: Any) -> Iterator[None]:
     """Run the block with these hooks (by name), every other hook at its
     default, and restore the hooks as they were after it: how a method other
-    than refine runs the engine (``docs/architecture.md``)."""
+    than refine runs the engine (``docs/architecture.md``).
+
+    A method plugs in by setting hooks when it is imported.  If that happens
+    inside the block (refine imported for the first time there), what it set
+    is carried over to the hooks restored after the block, so the method works
+    afterwards, and :class:`LoadedInsideError` is raised: the rest of the block
+    ran with that method's hooks, so its result cannot be trusted.  Import a
+    method before entering another's block."""
     fresh = _defaults()
     unknown = set(values) - set(fresh)
     if unknown:
@@ -168,8 +179,35 @@ def installed(**values: Any) -> Iterator[None]:
     fresh.update(values)
     module = globals()
     saved = {name: module[name] for name in fresh}
+    entered = {name: _copied(value) for name, value in fresh.items()}
     module.update(fresh)
     try:
         yield
     finally:
+        loaded = [name for name in fresh if _carry(name, module[name], fresh[name], entered[name], saved)]
         module.update(saved)
+    if loaded:
+        raise LoadedInsideError(f"hooks {sorted(loaded)} were set inside another method's block "
+                                "(a method imported there); they are kept, import methods first")
+
+
+def _copied(value: Any) -> Any:
+    return type(value)(value) if isinstance(value, (dict, list, set)) else value
+
+
+def _carry(name: str, now: Any, given: Any, entered: Any, saved: dict) -> bool:
+    """Carry over to ``saved`` what was set on hook ``name`` inside the block
+    (rebound, or a container changed in place); whether anything was."""
+    if now is not given:
+        saved[name] = now
+        return True
+    if isinstance(now, dict) and now != entered:
+        saved[name].update({k: v for k, v in now.items() if k not in entered or entered[k] is not v})
+        return True
+    if isinstance(now, list) and now != entered:
+        saved[name].extend(v for v in now if v not in entered)
+        return True
+    if isinstance(now, set) and now != entered:
+        saved[name].update(now - entered)
+        return True
+    return False

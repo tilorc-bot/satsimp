@@ -2,16 +2,19 @@
 with that method's hooks for a block, and leaves refine's untouched (``docs/architecture.md``)."""
 from __future__ import annotations
 
+import subprocess
+import sys
 from types import SimpleNamespace
 
 import pytest
-from sympy import Q, cos, exp, log, sin, symbols
+from sympy import Q, cos, log, sin, symbols
 
 from satsimp import refine
 from satsimp.engine import backend, driver, hooks
+from satsimp.methods.refine.identities.compat import upstream
 from satsimp.methods.refine.identities.compat.upstream import handlers_dict
 
-x, y = symbols("x y")
+x, y, n = symbols("x y n")
 
 
 def _toy(asked: list | None = None) -> SimpleNamespace:
@@ -30,7 +33,8 @@ def _run(method: SimpleNamespace, expr, assumptions=True):
 
 def test_only_the_methods_handlers_run():
     assert _run(_toy(), sin(x) + log(x), Q.negative(x)) == cos(x) + log(x)   # no refine row
-    assert _run(_toy(), exp(log(x)*y), Q.positive(x)) == exp(y*log(x))       # no _eval_refine
+    assert refine((-x)**n, Q.even(n)) == x**n                                 # Pow._eval_refine
+    assert _run(_toy(), (-x)**n, Q.even(n)) == (-x)**n                       # not called
     assert refine(log(x), Q.negative(x)) != log(x)
 
 
@@ -70,3 +74,30 @@ def test_a_call_from_inside_refine_is_its_own_top_level_call():
         del handlers_dict["Probe"]
     assert seen and all(s.func is cos for s in seen)
     assert not driver._calls and not driver._dispatchers
+    assert upstream.ask is not None and not hasattr(upstream.ask, "__wrapped__")
+    assert upstream.ask.__name__ != "memo_ask"                                # refine's ask restored
+    assert driver.splits_left[0] == driver.MAX_SPLITS
+
+
+_LOADED_INSIDE = """
+from types import SimpleNamespace
+from sympy import I, Q, log, pi, symbols
+from satsimp.engine import driver, hooks
+x = symbols("x")
+toy = SimpleNamespace(ask=lambda p, a=True: None, handlers_dict={})
+try:
+    with hooks.installed(dispatcher=toy, eval_method=None):
+        import satsimp
+        satsimp.refine(log(x), Q.negative(x))
+except hooks.LoadedInsideError:
+    pass
+else:
+    raise SystemExit("no LoadedInsideError")
+assert satsimp.refine(log(x), Q.negative(x)) == log(-x) + I*pi
+print("ok")
+"""
+
+
+def test_a_method_imported_inside_a_block_is_refused_and_still_works_after():
+    out = subprocess.run([sys.executable, "-c", _LOADED_INSIDE], capture_output=True, text=True)
+    assert out.stdout.strip() == "ok", out.stderr
