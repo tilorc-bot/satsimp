@@ -89,7 +89,7 @@ engine and methods. What changed for a consumer:
   | Variable | What it selects |
   |---|---|
   | `SATSIMP_HANDLERS` (was `SATREFINE_HANDLERS`) | refine's handler package: `handlers_identities` (default) or `handlers_v3` |
-  | `SATSIMP_BACKEND` (was `SATREFINE_BACKEND`) | the `ask` backend: `combined` (default), `satassume`, `sympy`, `union` |
+  | `SATSIMP_BACKEND` (was `SATREFINE_BACKEND`) | the `ask` backend: `combined` (default), `strict`, `satassume`, `sympy`, `union` |
   | `SATSIMP_IDENTITIES` (was `SATREFINE_IDENTITIES`) | `generated` (default) or `live` rule tables |
   | `SATSIMP_STRICT_LOOPS` (was `SATREFINE_STRICT_LOOPS`) | `1`: a tripped termination guard raises |
   | `SATSIMP_FULL_TESTS`, `SATSIMP_TERMINATION_FUZZ` (were `SATREFINE_...`) | the long tests (see [docs/refine-testing.md](docs/refine-testing.md)) |
@@ -113,6 +113,11 @@ handler asks its predicate questions through one seam, the dispatcher's `ask`, a
 | `satassume` | `satassume.sympy_api.ask` alone; out-of-scope and undecided queries are `None`, so the handler does not fire | the strict measurement of this engine |
 | `combined` | satassume; SymPy only where satassume has no model (matrix or unregistered custom predicates; a relation bound no theory interprets, such as a float, only for an engine with `uninterpreted="none"`: by default satassume reads such a relation as a free atom) or raises; assumptions satassume finds inconsistent raise | the default |
 | `union` | satassume first, SymPy for every `None` (the `combined` behaviour before 2026-09-25) | measurements |
+| `strict` | satassume only, routed as `combined` but `None` where `combined` would ask SymPy; inconsistent assumptions raise | satsimp without SymPy's assumption system |
+
+Under `strict` and `satassume` satsimp never calls SymPy's `ask`; under `combined`, `union` and `sympy` it does.
+Under every backend, Boolean nodes (relations, `And`/`Or`/`Not`, applied predicates)
+are decided through it, not by SymPy's `Boolean._eval_refine`.
 
 Select with `SATSIMP_BACKEND=<name>` (read at import; default `combined`),
 `satsimp.engine.backend.set_backend(name)`, or
