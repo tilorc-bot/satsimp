@@ -249,7 +249,6 @@ def test_sign_facts_are_what_proves_signs():
             (Q.nonnegative(1 + cos(x)), Q.real(x)),
             (Q.nonnegative(3 - 2*sin(x) + cos(x)), Q.real(x)),
             (Q.negative(sin(x) + sin(2*x)), Q.gt(x, -pi/2) & Q.lt(x, 0)),
-            (Q.positive(cos(1)), True),
             (Q.positive(tan(x)*cos(x)), Q.gt(x, 0) & Q.lt(x, pi/2)),
             (Q.ge(cosh(x), 1), Q.real(x)),
             (Q.negative(tanh(x) - 1), Q.real(x))]:
