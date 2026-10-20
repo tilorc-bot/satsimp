@@ -157,8 +157,9 @@ _add("B1-B7 extended", "a one-sided bound proves only extended signs; the row ho
     (acosh(cosh(x)), Q.negative_infinite(x), -x),
     (asech(sech(x)), Q.ge(x, 0), x),                          # asech(0) = oo
     (asech(sech(x)), Q.gt(x, -1), Abs(x)),
-    (asech(sech(x)), Q.positive_infinite(x), x),
-    (asech(sech(x)), Q.negative_infinite(x), -x),
+    # satassume >= 456e8b2 evaluates the infinite point itself: asech(sech(+-oo)) = asech(0) = oo
+    (asech(sech(x)), Q.positive_infinite(x), OneOf(x, oo)),
+    (asech(sech(x)), Q.negative_infinite(x), OneOf(-x, oo)),
     (asinh(sinh(x)), Q.ge(x, 0), x),                          # asinh(sinh(-oo)) = -oo
     (asinh(sinh(x)), Q.negative_infinite(x), x),
     (atanh(tanh(x)), Q.ge(x, 0), x),                          # atanh(tanh(oo)) = atanh(1) = oo
@@ -332,9 +333,10 @@ _add("default: odd pi/2 sign form", "a doubled sign form -(-1)**(n/2 + 3/2) inst
 # --- rules: inverse (from test_fuzzext_acsch_infinite.py) ---------------------------------------
 # im(Abs(w)) auto-evaluates to 0, so the acsch row's _OFF_CUT_LINES admitted an infinite Abs(w).
 _add("#10 B10", "acsch(csch(Abs(z))) -> Abs(z) fired where Abs(z) may be infinite (ext differential)", [
-    (acsch(csch(Abs(z))), Q.infinite(z), UNCHANGED),
+    # zoo: the value itself, Abs(z) = oo and acsch(csch(oo)) = acsch(0) = zoo (satassume >= 456e8b2)
+    (acsch(csch(Abs(z))), Q.infinite(z), OneOf(UNCHANGED, zoo)),
     # the inner Abs refines (Abs(-oo) = oo = -z, "B1-B7 extended"); acsch(csch(.)) must stay
-    (acsch(csch(Abs(z))), Q.extended_negative(z) & Q.infinite(z), OneOf(UNCHANGED, -acsch(csch(z)))),
+    (acsch(csch(Abs(z))), Q.extended_negative(z) & Q.infinite(z), OneOf(UNCHANGED, -acsch(csch(z)), zoo)),
     (acsch(csch(Abs(n))), Q.gt(n, 0), OneOf(UNCHANGED, acsch(csch(n)))),
 ], backends=("satassume", "combined"))
 _add("#10 B10", "the finite case still fires", [
