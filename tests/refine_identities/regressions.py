@@ -335,7 +335,8 @@ _add("default: odd pi/2 sign form", "a doubled sign form -(-1)**(n/2 + 3/2) inst
 _add("#10 B10", "acsch(csch(Abs(z))) -> Abs(z) fired where Abs(z) may be infinite (ext differential)", [
     # zoo: the value itself, Abs(z) = oo and acsch(csch(oo)) = acsch(0) = zoo (satassume >= 456e8b2)
     (acsch(csch(Abs(z))), Q.infinite(z), OneOf(UNCHANGED, zoo)),
-    # the inner Abs refines (Abs(-oo) = oo = -z, "B1-B7 extended"); acsch(csch(.)) must stay
+    # the inner Abs refines (Abs(-oo) = oo = -z, "B1-B7 extended"); acsch(csch(.)) must not
+    # become +-z or Abs(z) (its value zoo, SymPy's acsch(0), is fine)
     (acsch(csch(Abs(z))), Q.extended_negative(z) & Q.infinite(z), OneOf(UNCHANGED, -acsch(csch(z)), zoo)),
     (acsch(csch(Abs(n))), Q.gt(n, 0), OneOf(UNCHANGED, acsch(csch(n)))),
 ], backends=("satassume", "combined"))
