@@ -38,7 +38,7 @@ POSITIVE = [  # (expr, assumptions, expected, values)
     (gamma(n), Q.integer(n) & Q.positive(n), factorial(n - 1), None),
     (gamma(n + 1), Q.integer(n) & Q.nonnegative(n), factorial(n), None),
     (gamma(n), Q.integer(n) & Q.nonpositive(n), zoo, None),
-    (gamma(n), Q.integer(n) & Q.negative(n - 1), zoo, None),   # n <= 0 (v3 refuses; satassume #38)
+    (gamma(n), Q.integer(n) & Q.negative(n - 1), zoo, None),   # n <= 0 (satassume #38; v3 too since satassume 92f4bf4)
     (gamma(n + 3), Q.integer(n) & Q.nonpositive(n + 3), zoo, {n: INTS}),
     (gamma(n + 3), Q.integer(n) & Q.le(n + 3, 0), zoo, {n: INTS}),
     # binomial
