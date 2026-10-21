@@ -304,7 +304,9 @@ def test_gamma_nonpositive_integer():
 
 
 def test_gamma_left_alone():
-    for a in (Q.positive(n), Q.integer(n), True, Q.negative(n)):
+    # n <= 1 takes in gamma(1) = 1: no pole to prove
+    for a in (Q.positive(n), Q.integer(n), True, Q.negative(n),
+              Q.integer(n) & Q.negative(n - 2)):
         assert refine(gamma(n), a) == gamma(n)
     # half-integers
     assert refine(gamma(n + HALF), Q.integer(n) & Q.nonnegative(n)) == gamma(n + HALF)
