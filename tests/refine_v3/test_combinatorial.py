@@ -298,12 +298,13 @@ def test_gamma_nonpositive_integer():
     assert refine(gamma(n), Q.integer(n) & Q.nonpositive(n)) is zoo
     assert refine(gamma(n + 3), Q.integer(n) & Q.nonpositive(n + 3)) is zoo
     assert refine(gamma(n + 3), Q.integer(n) & Q.le(n + 3, 0)) is zoo
+    # n < 1 for an integer n is n <= 0 (satassume >= 92f4bf4 proves the integer bound)
+    assert refine(gamma(n), Q.integer(n) & Q.negative(n - 1)) is zoo
     agree(gamma(n), zoo, [{n: v} for v in range(-6, 1)])
 
 
 def test_gamma_left_alone():
-    for a in (Q.positive(n), Q.integer(n), True, Q.negative(n),
-              Q.integer(n) & Q.negative(n - 1)):
+    for a in (Q.positive(n), Q.integer(n), True, Q.negative(n)):
         assert refine(gamma(n), a) == gamma(n)
     # half-integers
     assert refine(gamma(n + HALF), Q.integer(n) & Q.nonnegative(n)) == gamma(n + HALF)
