@@ -134,7 +134,24 @@ def _memoized(ask: Any) -> Any:
         answer = ask(proposition, assumptions)
         cache[key] = answer
         return answer
+    true_cache: dict = {}
+
+    def memo_true(proposition: Any, assumptions: Any, decide: Any) -> bool:
+        """``ask(proposition, assumptions) is True`` by ``decide`` (a True-only
+        query, :data:`.hooks.ask_true`), remembered beside the full answers,
+        one of which decides it when it was asked first."""
+        key = (proposition, assumptions)
+        try:
+            if key in cache:
+                return cache[key] is True
+            if key in true_cache:
+                return true_cache[key]
+        except TypeError:
+            return decide(proposition, assumptions)
+        answer = true_cache[key] = decide(proposition, assumptions)
+        return answer
     memo_ask.unmemoized = ask   # a nested top-level call memoizes this, not the outer call's memo
+    memo_ask.true = memo_true
     return memo_ask
 
 

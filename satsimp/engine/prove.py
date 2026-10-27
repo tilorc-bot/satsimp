@@ -43,14 +43,25 @@ from sympy.printing.precedence import PRECEDENCE
 from . import hooks
 
 
-def provable(cond: Any, assumptions: Any, order: bool = False) -> bool | None:
+def provable(cond: Any, assumptions: Any, order: bool = False,
+             true_only: bool = False) -> bool | None:
     """Decide ``cond`` connective by connective; ``None`` when undecided.
 
     With ``order`` (how :func:`decide` refines ``Piecewise`` conditions), the
     relation atoms ``Q.ge``, ``Q.gt``, ``Q.le``, ``Q.lt``, ``Q.eq``, ``Q.ne``
     and SymPy relationals (``x >= y``) are decided by :func:`_order` instead
     of a bare ``ask``, and an ``And`` with an undecided part is still refuted
-    by a later part."""
+    by a later part.
+
+    With ``true_only`` (a caller that acts only on ``True``) the atoms of
+    ``cond``'s ``And``/``Or`` structure are asked whether they are True
+    (:data:`.hooks.ask_true`: no search for a False), so a refuted one may
+    come back ``None``, and the result is ``True`` when it is without
+    ``true_only``.  Under a ``Not``, in a :class:`ByCases` (which drops its
+    refuted alternatives before it asks the rest whole) and with ``order``
+    the answers stay full."""
+    if order:
+        true_only = False
     if cond is S.true or cond is True:
         return True
     if cond is S.false or cond is False:
@@ -58,15 +69,16 @@ def provable(cond: Any, assumptions: Any, order: bool = False) -> bool | None:
     if isinstance(cond, And):
         undecided = False
         for c in sorted(cond.args, key=_ask_cost):     # relations last, and only if the rest holds
-            p = provable(c, assumptions, order)
+            p = provable(c, assumptions, order, true_only)
             if p is False or p is None and not order:
                 return p                                 # undecided: not provable either way
             undecided |= p is None                       # (a condition goes on looking for a refutation)
         return None if undecided else True
     if isinstance(cond, Or):
+        true_only = true_only and not isinstance(cond, ByCases)
         undecided = []
         for c in sorted(cond.args, key=_ask_cost):
-            p = provable(c, assumptions, order)
+            p = provable(c, assumptions, order, true_only)
             if p is True:
                 return True
             if p is None:
@@ -82,7 +94,7 @@ def provable(cond: Any, assumptions: Any, order: bool = False) -> bool | None:
         relation = _as_relation(cond)
         if relation is not None:
             return _order(*relation, assumptions)
-    return _ask_atom(cond, assumptions)
+    return _ask_atom(cond, assumptions, true_only)
 
 
 class ByCases(Or):
@@ -126,10 +138,15 @@ def decide(cond: Any, assumptions: Any) -> bool | None:
     return provable(cond, assumptions, order=True)
 
 
-def _ask_atom(cond: Any, assumptions: Any) -> bool | None:
-    """One ``ask``; a sign or realness atom it leaves open is tried on the stated bounds."""
+def _ask_atom(cond: Any, assumptions: Any, true_only: bool = False) -> bool | None:
+    """One ``ask``; a sign or realness atom it leaves open is tried on the stated bounds.
+    ``true_only``: only whether it is True is asked (:data:`.hooks.ask_true`), a
+    False is ``None``."""
     try:
-        answer = hooks.dispatcher.ask(cond, assumptions)
+        if true_only:
+            answer = True if hooks.ask_true(cond, assumptions) else None
+        else:
+            answer = hooks.dispatcher.ask(cond, assumptions)
     except (ValueError, TypeError, AssertionError):   # SymPy's relation ask (LRA) raising on consistent facts
         return None
     if answer is None and isinstance(cond, AppliedPredicate) and cond.function in _BOUND_DECIDED \
@@ -189,12 +206,12 @@ def _order(name: str, u: Any, v: Any, assumptions: Any) -> bool | None:
 
 def _holds(name: str, u: Any, v: Any, assumptions: Any) -> bool:
     by_signs, by_relations = ORDER[name]
-    if provable(by_signs(u, v), assumptions) is True:
+    if provable(by_signs(u, v), assumptions, true_only=True) is True:
         return True
-    if provable(Q.infinite(u) | Q.infinite(v), assumptions) is True:
+    if provable(Q.infinite(u) | Q.infinite(v), assumptions, true_only=True) is True:
         return False    # SymPy's relation ask is unsound at infinity: Q.eq(x, y) "True" for x = -oo, y <= 0
     stated = _states_relations(assumptions)
-    return any(_ask_atom(atom, assumptions) is True for atom in by_relations(u, v)
+    return any(_ask_atom(atom, assumptions, true_only=True) is True for atom in by_relations(u, v)
                if stated or atom.function not in (Q.eq, Q.ne))
 
 
@@ -302,7 +319,7 @@ def _from_bounds(predicate: Any, u: Any, assumptions: Any) -> bool | None:
                 Q.nonpositive: no_neg_inf,
                 Q.nonzero: (above and no_pos_inf) or (below and no_neg_inf)}[predicate]
     try:     # else whether ``ask`` proves ``u`` finite (what a bound on the extended reals leaves open)
-        return True if finite or excluded or hooks.dispatcher.ask(Q.finite(u), assumptions) is True else None
+        return True if finite or excluded or hooks.ask_true(Q.finite(u), assumptions) else None
     except (ValueError, TypeError, AssertionError):
         return None
 

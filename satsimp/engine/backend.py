@@ -105,9 +105,9 @@ def _sympy_ask(proposition: Any, assumptions: Any = True) -> bool | None:
     return ask(proposition, assumptions)
 
 
-def _satassume_ask(proposition: Any, assumptions: Any = True) -> bool | None:
+def _satassume_ask(proposition: Any, assumptions: Any = True, **modes: Any) -> bool | None:
     from satassume.sympy_api import ask
-    return ask(proposition, assumptions)
+    return ask(proposition, assumptions, **modes)
 
 
 # --- the guard on SymPy's ``Q.nonzero`` handlers (combined and union) ---------
@@ -392,8 +392,9 @@ class _FlagUninterpreted:
             raise _NoTheory(str(e)) from e
 
 
-def route(proposition: Any, assumptions: Any = True) -> tuple["bool | None", str | None]:
-    """satassume's answer, and why SymPy should be asked instead.
+def route(proposition: Any, assumptions: Any = True, **modes: Any) -> tuple["bool | None", str | None]:
+    """satassume's answer, and why SymPy should be asked instead.  ``modes``
+    are passed to :func:`satassume.sympy_api.ask` (:func:`ask_true`).
 
     Returns ``(answer, reason)``.  ``reason`` is None when satassume's answer
     stands, including an undecided ``None``.  Otherwise the answer is None and
@@ -432,7 +433,7 @@ def route(proposition: Any, assumptions: Any = True) -> tuple["bool | None", str
     except Exception:  # noqa: BLE001 - a backend answers None, it does not crash
         return None, "error"
     try:
-        return ask(proposition, assumptions, engine=_FlagUninterpreted(engine)), None
+        return ask(proposition, assumptions, engine=_FlagUninterpreted(engine), **modes), None
     except _NoTheory:
         return None, "no-theory"
     except ValueError as e:
@@ -443,8 +444,8 @@ def route(proposition: Any, assumptions: Any = True) -> tuple["bool | None", str
         return None, "error"
 
 
-def _combined_ask(proposition: Any, assumptions: Any = True) -> bool | None:
-    answer, reason = route(proposition, assumptions)
+def _combined_ask(proposition: Any, assumptions: Any = True, **modes: Any) -> bool | None:
+    answer, reason = route(proposition, assumptions, **modes)
     if reason is None:
         return answer
     if reason == "inconsistent":
@@ -457,8 +458,8 @@ def _combined_ask(proposition: Any, assumptions: Any = True) -> bool | None:
     return _guarded_sympy_ask(proposition, assumptions)
 
 
-def _strict_ask(proposition: Any, assumptions: Any = True) -> bool | None:
-    answer, reason = route(proposition, assumptions)
+def _strict_ask(proposition: Any, assumptions: Any = True, **modes: Any) -> bool | None:
+    answer, reason = route(proposition, assumptions, **modes)
     if reason == "inconsistent":
         raise ValueError(f"inconsistent assumptions {assumptions}")
     return answer
@@ -546,8 +547,9 @@ def set_backend(name: str) -> None:
 Observer = Callable[[Any, Any, str, "bool | None"], None]
 observers: list[Observer] = []
 """Callables told about every answered query: ``(proposition, assumptions,
-backend name, answer)``.  The test suite uses this to count out-of-scope
-queries per test."""
+backend name, answer)``; the answer of an :func:`ask_true` query is
+``None`` for any other than True.  The test suite uses this to count
+out-of-scope queries per test."""
 
 
 def ask(proposition: Any, assumptions: Any = True) -> bool | None:
@@ -556,6 +558,43 @@ def ask(proposition: Any, assumptions: Any = True) -> bool | None:
     for observe in observers:
         observe(proposition, assumptions, _current, answer)
     return answer
+
+
+#: the backends whose satassume query :func:`ask_true` asks in a True-only mode
+_TRUE_ONLY_BACKENDS = ("satassume", "combined", "strict")
+
+
+def ask_true(proposition: Any, assumptions: Any = True) -> bool:
+    """Whether :func:`ask` answers True (:data:`.hooks.ask_true`), for a caller
+    that acts only on a True (a rewrite whose condition must be proved).
+
+    Under the ``satassume``, ``combined`` and ``strict`` backends, satassume
+    is asked with ``true_only=True, check_consistency="once"`` (satassume
+    #317): it does not search for a False, which such a caller throws away,
+    and checks each assumption set once instead of in every query.  A True is
+    the same True, and inconsistent assumptions still raise as :func:`ask`
+    does.  Where :func:`ask` would ask SymPy (``combined``), SymPy's answer is
+    the same as there.  ``union`` keeps the full query: there satassume's
+    False stops SymPy from being asked, and a None would not.  The full query
+    also when the installed satassume has no such modes (``_modes``).
+    :data:`observers` are told the True-only answer: ``None`` for a False."""
+    if _current not in _TRUE_ONLY_BACKENDS or not _modes():
+        return ask(proposition, assumptions) is True
+    answer = _IMPLEMENTATIONS[_current](proposition, assumptions, **_modes())
+    for observe in observers:
+        observe(proposition, assumptions, _current, answer)
+    return answer is True
+
+
+@cache
+def _modes() -> dict:
+    """The keywords of satassume's True-only query, or ``{}`` when the installed
+    satassume's ``ask`` has none (before satassume #317)."""
+    import inspect
+    from satassume.sympy_api import ask
+    if "true_only" not in inspect.signature(ask).parameters:
+        return {}
+    return {"true_only": True, "check_consistency": "once"}
 
 
 @contextmanager

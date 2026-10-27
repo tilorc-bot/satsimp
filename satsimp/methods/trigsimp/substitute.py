@@ -165,7 +165,7 @@ def _signless(e: Any) -> Any:
 
 def _holds(cache: dict, key: Any, b: dict, cond: Any, assumptions: Any) -> bool:
     if key not in cache:
-        cache[key] = cond is True or provable(subst(cond, b), assumptions) is True
+        cache[key] = cond is True or provable(subst(cond, b), assumptions, true_only=True) is True
     return cache[key]
 
 

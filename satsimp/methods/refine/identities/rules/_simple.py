@@ -57,7 +57,7 @@ def _range(node: Any, assumptions: Any) -> tuple | None:
     """``(lo, hi, lo_open, hi_open)``: the range of a bounded head applied to its argument, or ``None``."""
     from satsimp.engine.prove import provable
     for lhs, interval, cond in RANGES.get(node.func, ()):
-        if provable(cond.xreplace({lhs.args[0]: node.args[0]}), assumptions) is True:
+        if provable(cond.xreplace({lhs.args[0]: node.args[0]}), assumptions, true_only=True) is True:
             return interval.start, interval.end, interval.left_open, interval.right_open
     return None
 

@@ -125,10 +125,10 @@ def identity_handler(rows: list[Row], *, measure: Measure | None = None,
         m0 = m(expr, assumptions)
         for lhs, rhs, domain in rows:
             for b in bindings(lhs, expr, assumptions):
-                if provable(subst(domain, b), assumptions) is not True:
+                if provable(subst(domain, b), assumptions, true_only=True) is not True:
                     continue
                 if unless and (lhs, rhs, domain) in unless \
-                        and provable(subst(unless[lhs, rhs, domain], b), assumptions) is True:
+                        and provable(subst(unless[lhs, rhs, domain], b), assumptions, true_only=True) is True:
                     continue
                 try:
                     cand = subst(rhs, b, rebuild=True)
@@ -188,9 +188,9 @@ def rule_handler(rows: list, *, by_binding: bool = False) -> Callable[[Any, Any]
         for group in (grouped() if by_binding else ((row,) for row in rows)):
             for b in bindings(group[0][0], expr, assumptions):
                 for lhs, rhs, hyp, unless in group:
-                    if provable(subst(hyp, b), assumptions) is not True:
+                    if provable(subst(hyp, b), assumptions, true_only=True) is not True:
                         continue
-                    if unless is not None and provable(subst(unless, b), assumptions) is True:
+                    if unless is not None and provable(subst(unless, b), assumptions, true_only=True) is True:
                         continue
                     out = subst(rhs, b, rebuild=True)
                     if out != expr:

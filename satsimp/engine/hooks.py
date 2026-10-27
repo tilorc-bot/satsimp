@@ -22,6 +22,12 @@ Set by :mod:`satsimp.methods.refine.identities.compat` (its ``__init__``):
     neither alternative holds alone); :func:`.prove.provable` asks the
     undecided alternatives of an ``Or`` a table marks (:func:`.prove.by_cases`)
     with it when none is provable on its own (issue #18).  Read at call time, as the backend is.
+:data:`ask_true`
+    ``ask_true(condition, assumptions)``: whether the dispatcher's ``ask``
+    answers True, for :func:`.prove.provable` with ``true_only`` (a caller
+    that acts only on a True).  Refine's asks the backend's True-only query
+    (:func:`.backend.ask_true`: no search for a False) unless the
+    dispatcher's ``ask`` is patched; the default asks ``dispatcher.ask``.
 
 Set by :mod:`satsimp.methods.refine.identities.compat.sympy_fixes`:
 
@@ -108,6 +114,11 @@ def ask_whole(condition: Any, assumptions: Any) -> bool | None:
     return None
 
 
+def ask_true(condition: Any, assumptions: Any) -> bool:
+    """The default: the dispatcher's ``ask`` answers True."""
+    return dispatcher.ask(condition, assumptions) is True
+
+
 def rebuild(func: Any, args: Any, assumptions: Any) -> Any:
     """The default: ``func(*args)``."""
     return func(*args)
@@ -147,7 +158,8 @@ observer: list[Observer] = []
 def _defaults() -> dict[str, Any]:
     """Every hook's value before any method sets it (new containers on each call)."""
     return {
-        "dispatcher": None, "ask_whole": ask_whole_default, "rebuild": rebuild_default,
+        "dispatcher": None, "ask_whole": ask_whole_default,
+        "ask_true": ask_true_default, "rebuild": rebuild_default,
         "eval_refine": {}, "eval_method": "_eval_refine", "generated": {},
         "match": [], "non_scalar": (), "commutative": (Add, Mul, LatticeOp),
         "fallback": {}, "own_args": set(), "opaque": (), "conditional": None,
@@ -155,7 +167,8 @@ def _defaults() -> dict[str, Any]:
     }
 
 
-ask_whole_default, rebuild_default, two_valued_default = ask_whole, rebuild, two_valued
+ask_whole_default, ask_true_default, rebuild_default, two_valued_default = \
+    ask_whole, ask_true, rebuild, two_valued
 
 
 _outside: list[dict] = []

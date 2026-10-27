@@ -202,6 +202,16 @@ SymPy's `ask` never gets a whole `Or`: it does not split cases and calls an
 `Or` true under inconsistent assumptions. Marked: the power and log forms' domains in
 `power_exp_log`, `frac`'s `f`, and `u <= v` from signs in the order vocabulary.
 
+**True only.** A rule's domain, hypothesis and `unless` condition only fire
+on a proof, so they are asked `provable(..., true_only=True)`: each atom of
+the `And`/`Or` structure is asked through `hooks.ask_true`, which under the
+`satassume`, `combined` and `strict` backends is satassume's
+`ask(true_only=True, check_consistency="once")` (satassume #317): no search
+for a False, and one consistency check per assumption set instead of one per
+query. A True is the same True; atoms under a `Not`, in a `by_cases` and in
+`decide` keep the full answer. With a satassume that has no such modes, and
+under `union` and `sympy`, it is the full `ask`.
+
 **The order vocabulary.** `decide` (used for `Piecewise` conditions: the
 definitions and `refine_piecewise` in `rules/_simple.py`) decides relations
 by proof forms (`ORDER`): from signs and infinite endpoints; from stated
