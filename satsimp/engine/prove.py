@@ -141,16 +141,18 @@ def decide(cond: Any, assumptions: Any) -> bool | None:
 def _ask_atom(cond: Any, assumptions: Any, true_only: bool = False) -> bool | None:
     """One ``ask``; a sign or realness atom it leaves open is tried on the stated bounds.
     ``true_only``: only whether it is True is asked (:data:`.hooks.ask_true`), a
-    False is ``None``."""
+    False is ``None``.  An atom that the stated bounds may decide is asked in
+    full: its False saves the bounds (more queries than the False costs)."""
+    bounded = isinstance(cond, AppliedPredicate) and cond.function in _BOUND_DECIDED \
+        and len(cond.arguments) == 1
     try:
-        if true_only:
+        if true_only and not bounded:
             answer = True if hooks.ask_true(cond, assumptions) else None
         else:
             answer = hooks.dispatcher.ask(cond, assumptions)
     except (ValueError, TypeError, AssertionError):   # SymPy's relation ask (LRA) raising on consistent facts
         return None
-    if answer is None and isinstance(cond, AppliedPredicate) and cond.function in _BOUND_DECIDED \
-            and len(cond.arguments) == 1:
+    if answer is None and bounded:
         return _from_bounds(cond.function, cond.arguments[0], assumptions)
     return True if answer is True else (False if answer is False else None)
 

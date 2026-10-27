@@ -169,9 +169,11 @@ def test_provable_same_true(name, cond):
 @modes
 def test_refuted_atom_undecided():
     """The point: a refuted atom is not searched for, and comes back None
-    (a ``Not`` keeps the full answer)."""
+    (a ``Not`` keeps the full answer); an atom the stated bounds may decide is
+    asked in full, so its False saves the bounds' queries."""
     with backend.using("satassume"):
-        assert provable(Q.negative(x), Q.positive(x)) is False
-        assert provable(Q.negative(x), Q.positive(x), true_only=True) is None
-        assert provable(~Q.negative(x), Q.positive(x), true_only=True) is True
-        assert prove._ask_atom(Q.negative(x), Q.positive(x), true_only=True) is None
+        assert provable(Q.zero(x), Q.positive(x)) is False
+        assert provable(Q.zero(x), Q.positive(x), true_only=True) is None
+        assert provable(~Q.zero(x), Q.positive(x), true_only=True) is True
+        assert prove._ask_atom(Q.zero(x), Q.positive(x), true_only=True) is None
+        assert prove._ask_atom(Q.negative(x), Q.positive(x), true_only=True) is False

@@ -122,19 +122,20 @@ def _memoized(ask: Any) -> Any:
     in every branch of a split), and the answer under the same assumptions is
     the same.  Exceptions are not remembered."""
     cache: dict = {}
+    true_cache: dict = {}
 
     def memo_ask(proposition: Any, assumptions: Any = True) -> Any:
         key = (proposition, assumptions)
         try:
             return cache[key]
         except KeyError:
-            pass
+            if true_cache.get(key):                      # a True-only True is the same True
+                return True
         except TypeError:
             return ask(proposition, assumptions)
         answer = ask(proposition, assumptions)
         cache[key] = answer
         return answer
-    true_cache: dict = {}
 
     def memo_true(proposition: Any, assumptions: Any, decide: Any) -> bool:
         """``ask(proposition, assumptions) is True`` by ``decide`` (a True-only
